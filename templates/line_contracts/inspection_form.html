@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Inspection info ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – Inspection (item {{ item_index + 1 }} of {{ total_items }})</h1>
+    <p class="mb-2"><strong>Item:</strong> {{ item.item_name or '-' }} | {{ item.part_number or '-' }} | Qty: {{ item.qty }} | Unit price: {{ item.unit_price }}</p>
+    <form method="POST" action="{% if single %}{{ url_for(bp ~ '.input_inspection_item', contract_id=contract.contract_id, item_id=item.item_id) }}{% else %}{{ url_for(bp ~ '.input_inspection_iterate', contract_id=contract.contract_id) }}{% endif %}" style="max-width: 400px;">
+        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+        {% if not single %}<input type="hidden" name="next_index" value="{{ item_index + 1 }}">{% endif %}
+        <div class="form-group">
+            <label for="inspection_note_no" class="form-label">Inspection Note No.</label>
+            <input type="text" id="inspection_note_no" name="inspection_note_no" class="form-input" value="{{ item.inspection_note_no or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="inspection_note_date" class="form-label">Inspection Note Date</label>
+            <input type="date" id="inspection_note_date" name="inspection_note_date" class="form-input" value="{{ item.inspection_note_date or '' }}">
+        </div>
+        <div class="btn-group mt-3">
+            <button type="submit" class="btn btn-primary">Save{% if not single %} and next{% endif %}</button>
+            <a href="{% if not single %}{{ url_for(bp ~ '.input_inspection_choose', contract_id=contract.contract_id) }}{% else %}{{ url_for(bp ~ '.input_inspection_specific', contract_id=contract.contract_id) }}{% endif %}" class="btn btn-secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

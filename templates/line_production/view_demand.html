@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Demand Note #{{ demand.demand_no }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Demand Note #{{ demand.demand_no }} ({{ line|capitalize }})</h1>
+    <div class="mt-4">
+        <a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary mb-3">← Back to {{ line|capitalize }} Dashboard</a>
+    </div>
+    <div class="info-card mt-4">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <div>
+                <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Demand Date</label>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">{{ demand.demand_date }}</p>
+            </div>
+            <div>
+                <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Department</label>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">{{ demand.department }}</p>
+            </div>
+            <div>
+                <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Required Date</label>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">{{ demand.required_date }}</p>
+            </div>
+            <div>
+                <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Demanded By</label>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">{{ demand.demanded_by }}</p>
+            </div>
+            <div>
+                <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Status</label>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">
+                    {% if demand.approved %}
+                    <span style="color: #27ae60; font-weight: 600;">✓ Approved</span>
+                    {% else %}
+                    <span style="color: #f39c12; font-weight: 600;">⏳ Pending Approval</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4">
+        <h2>Components</h2>
+        {% if components %}
+        <div class="table-container mt-3">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">Sr#</th>
+                        <th style="width: 35%;">Part Description</th>
+                        <th style="width: 12%;">Qty</th>
+                        <th style="width: 18%;">Person's Demand</th>
+                        <th style="width: 15%;">Project</th>
+                        <th style="width: 12%;">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for component in components %}
+                    <tr>
+                        <td>{{ component.sr_no }}</td>
+                        <td>{{ component.part_description }}</td>
+                        <td><strong>{{ component.qty }}</strong></td>
+                        <td>{{ component.persons_demand or '-' }}</td>
+                        <td>{{ component.project or '-' }}</td>
+                        <td>{{ component.remarks or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+            <strong>Total Components:</strong> {{ components|length }}
+        </div>
+        {% else %}
+        <div class="text-center mt-3" style="padding: 2rem; background: #f8f9fa; border-radius: 8px;">
+            <p style="color: #666;">No components in this demand note</p>
+        </div>
+        {% endif %}
+    </div>
+    <div class="btn-group mt-4">
+        <a href="{{ url_for(bp ~ '.display_demand') }}" class="btn btn-secondary">← Back to Demand Notes</a>
+        <button onclick="printDemandNote()" class="btn btn-primary">🖨️ Print Demand Note</button>
+        {% if not demand.approved %}
+        <form method="POST" action="{{ url_for(bp ~ '.approve_demand', demand_no=demand.demand_no) }}" style="display: inline;">
+            <button type="submit" class="btn btn-success">📤 Send for Approval</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+<script>function printDemandNote() { window.print(); }</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Send to QC ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container-narrow">
+    <h1>Send Product to Quality Control ({{ line|capitalize }})</h1>
+    <p>Submit products for quality inspection</p>
+    <div class="mt-4"></div>
+    <form method="POST" action="{{ url_for(bp ~ '.send_to_qc') }}" class="mt-4">
+        <div class="form-group">
+            <label for="product_name" class="form-label required">Product Name (PCB/Assembly Name)</label>
+            <input type="text" id="product_name" name="product_name" class="form-input" required
+                placeholder="e.g., PCB Assembly T69">
+        </div>
+        <div class="form-group">
+            <label for="part_type" class="form-label required">Part Type</label>
+            <input type="text" id="part_type" name="part_type" class="form-input" required
+                placeholder="e.g., PCB, Assembly">
+        </div>
+        <div class="form-group">
+            <label for="part_value" class="form-label required">Part Value</label>
+            <input type="text" id="part_value" name="part_value" class="form-input" required placeholder="e.g., T69">
+        </div>
+        <div class="form-group">
+            <label for="footprint" class="form-label required">Footprint</label>
+            <input type="text" id="footprint" name="footprint" class="form-input" required placeholder="e.g., Custom">
+        </div>
+        <div class="form-group">
+            <label for="project_number" class="form-label required">Project Number</label>
+            <input type="text" id="project_number" name="project_number" class="form-input" required
+                placeholder="e.g., PROJ-2024-001">
+        </div>
+        <div class="form-group">
+            <label for="qty" class="form-label required">Quantity</label>
+            <input type="number" id="qty" name="qty" class="form-input" required min="1" placeholder="Enter quantity">
+        </div>
+        <div
+            style="background: #e3f2fd; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196f3; margin: 1.5rem 0;">
+            <p style="margin: 0; color: #1565c0;">
+                <strong>ℹ️ Note:</strong> This will send a notification to QC Managers ({{ line|capitalize }}) for
+                quality inspection.
+            </p>
+        </div>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">📤 Send to QC</button>
+            <a href="{{ url_for(bp ~ '.production_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

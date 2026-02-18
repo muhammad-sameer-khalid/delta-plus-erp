@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Input Contract ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Input a contract ({{ line|capitalize }})</h1>
+    <p class="mb-4">Enter contract details. After saving you will add items.</p>
+    <div class="mt-4"><a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary mb-3">←
+            Back to Contracts</a></div>
+    <form method="POST" action="{{ url_for(bp ~ '.input_contract') }}" class="mt-4" style="max-width: 520px;">
+        <div class="form-group">
+            <label for="contract_no" class="form-label required">Contract No.</label>
+            <input type="text" id="contract_no" name="contract_no" class="form-input" required
+                placeholder="e.g. CTR-2024-001">
+        </div>
+        <div class="form-group">
+            <label for="contract_date" class="form-label required">Contract Date</label>
+            <input type="date" id="contract_date" name="contract_date" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="contract_type" class="form-label required">Contract Type</label>
+            <select id="contract_type" name="contract_type" class="form-input" required>
+                <option value="manufacturing">Manufacturing</option>
+                <option value="supply">Supply</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="total_value" class="form-label required">Total Value (Rs.)</label>
+            <input type="number" id="total_value" name="total_value" class="form-input" step="0.01" min="0.01" required
+                placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label for="delivery_deadline" class="form-label required">Delivery Deadline</label>
+            <input type="date" id="delivery_deadline" name="delivery_deadline" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="bg_number" class="form-label required">BG Number</label>
+            <input type="text" id="bg_number" name="bg_number" class="form-input" required placeholder="e.g. BG-001">
+        </div>
+        <div class="form-group">
+            <label for="department" class="form-label required">Department</label>
+            <input type="text" id="department" name="department" class="form-input" required placeholder="DGP (Army)">
+        </div>
+        <div class="form-group">
+            <label class="form-label required">BG Type</label>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="Bank Margin"> Bank Margin
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="100% Cash Margin"> 100% Cash Margin
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="CDR"> CDR
+                </label>
+            </div>
+            <small class="form-text text-muted">Select all that apply.</small>
+        </div>
+        <div class="form-group">
+            <label for="bg_amount" class="form-label required">BG Amount</label>
+            <input type="number" id="bg_amount" name="bg_amount" class="form-input" step="0.01" min="0.01" required
+                placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label for="bg_expiry_date" class="form-label required">BG Expiry Date</label>
+            <input type="date" id="bg_expiry_date" name="bg_expiry_date" class="form-input" required>
+        </div>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Save and add items</button>
+            <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

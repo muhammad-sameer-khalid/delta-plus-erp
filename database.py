@@ -1,0 +1,146 @@
+import mysql.connector
+from mysql.connector import Error, pooling
+from config import Config
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Connection pool for better performance
+connection_pool = None
+
+def init_connection_pool():
+    """Initialize MySQL connection pool"""
+    global connection_pool
+    try:
+        connection_pool = pooling.MySQLConnectionPool(
+            pool_name="delta_plus_pool",
+            pool_size=5,
+            pool_reset_session=True,
+            **Config.DB_CONFIG
+        )
+        logger.info("MySQL connection pool created successfully")
+        return True
+    except Error as e:
+        logger.error(f"Error creating connection pool: {e}")
+        return False
+
+def get_db_connection():
+    """Get a connection from the pool"""
+    try:
+        if connection_pool is None:
+            init_connection_pool()
+        return connection_pool.get_connection()
+    except Error as e:
+        logger.error(f"Error getting connection from pool: {e}")
+        return None
+
+def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False):
+    """
+    Execute a SQL query with parameterized inputs to prevent SQL injection
+    
+    Args:
+        query: SQL query string with %s placeholders
+        params: Tuple of parameters to substitute
+        fetch: Whether to fetch results
+        fetch_one: Whether to fetch only one result
+        commit: Whether to commit the transaction
+    
+    Returns:
+        Query results if fetch=True, affected row count if commit=True, None otherwise
+    """
+    connection = get_db_connection()
+    if connection is None:
+        return None
+    
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(query, params or ())
+        
+        if fetch_one:
+            result = cursor.fetchone()
+        elif fetch:
+            result = cursor.fetchall()
+        else:
+            result = cursor.rowcount
+        
+        if commit:
+            connection.commit()
+        
+        return result
+    
+    except Error as e:
+        logger.error(f"Database error: {e}")
+        if commit:
+            connection.rollback()
+        return None
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+def execute_many(query, params_list, commit=True):
+    """
+    Execute multiple queries with different parameters (batch insert/update)
+    
+    Args:
+        query: SQL query string
+        params_list: List of parameter tuples
+        commit: Whether to commit the transaction
+    
+    Returns:
+        Number of affected rows or None on error
+    """
+    connection = get_db_connection()
+    if connection is None:
+        return None
+    
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        cursor.executemany(query, params_list)
+        
+        if commit:
+            connection.commit()
+        
+        return cursor.rowcount
+    
+    except Error as e:
+        logger.error(f"Database error in batch operation: {e}")
+        if commit:
+            connection.rollback()
+        return None
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+def table_exists(table_name):
+    """Check if a table exists in the database"""
+    query = """
+        SELECT COUNT(*) as count
+        FROM information_schema.tables 
+        WHERE table_schema = %s AND table_name = %s
+    """
+    result = execute_query(query, (Config.DB_CONFIG['database'], table_name), fetch_one=True)
+    return result and result['count'] > 0
+
+def create_table(create_query):
+    """Create a table with the given CREATE TABLE query"""
+    return execute_query(create_query, commit=True)
+
+def init_database():
+    """Initialize database with required tables"""
+    logger.info("Initializing database...")
+    
+    # Import schema initialization
+    from schema import create_all_tables
+    create_all_tables()
+    
+    logger.info("Database initialization complete")

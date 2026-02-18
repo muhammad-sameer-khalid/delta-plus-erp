@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Quality Control ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Quality Control Department ({{ line|capitalize }})</h1>
+    <p>Component and Product Quality Inspection</p>
+    <div class="mt-4"></div>
+    <div class="mt-4">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.components') }}'">
+            <h4>Components for Quality Check</h4>
+            <p>Review and approve components from POs</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.products') }}'">
+            <h4>Products for Quality Check</h4>
+            <p>Review and approve products from Production</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

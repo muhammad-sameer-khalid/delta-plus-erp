@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Invoice Info ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – Invoice Info (item {{ item_index + 1 }} of {{ total_items }})</h1>
+    <p class="mb-2"><strong>Item:</strong> {{ item.item_name or '-' }} | {{ item.part_number or '-' }} | Qty: {{
+        item.qty }}</p>
+
+    <!-- 
+      We'll expect the backend routes for 'input_invoice_iterate' and 'input_invoice_item' 
+      to be defined in the BP similar to payment.
+    -->
+    <form method="POST"
+        action="{{ url_for(bp ~ '.input_invoice_iterate', contract_id=contract.contract_id) if not single else url_for(bp ~ '.input_invoice_item', contract_id=contract.contract_id, item_id=item.item_id) }}"
+        style="max-width: 480px;">
+
+        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+        {% if not single %}<input type="hidden" name="next_index" value="{{ item_index + 1 }}">{% endif %}
+
+        <div class="form-group">
+            <label for="invoice_no" class="form-label">Invoice No.</label>
+            <input type="text" id="invoice_no" name="invoice_no" class="form-input" value="{{ item.invoice_no or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="submission_date" class="form-label">Submission Date</label>
+            <input type="date" id="submission_date" name="submission_date" class="form-input"
+                value="{{ item.submission_date or '' }}">
+        </div>
+
+        <div class="btn-group mt-3">
+            <button type="submit" class="btn btn-primary">Save{% if not single %} and next{% endif %}</button>
+            <a href="{{ url_for(bp ~ '.input_invoice_choose', contract_id=contract.contract_id) if not single else url_for(bp ~ '.input_invoice_specific', contract_id=contract.contract_id) }}"
+                class="btn btn-secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

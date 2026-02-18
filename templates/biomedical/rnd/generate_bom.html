@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Generate BOM (Biomedical) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Generate Bill of Material <span style="color:#666;font-size:0.9rem;">(Biomedical)</span></h1>
+    <p>Create a new BOM for PCBs or Assemblies</p>
+    <form method="POST" action="{{ url_for(bp ~ '.generate_bom') }}" id="bomForm">
+        <div class="form-group">
+            <label for="bom_name" class="form-label required">BOM Name</label>
+            <input type="text" id="bom_name" name="bom_name" class="form-input" required placeholder="e.g., Electronic Amplifier T69">
+            <small style="color: #666;">Must be unique - no duplicates allowed</small>
+        </div>
+        <div class="form-group">
+            <label for="bom_type" class="form-label required">BOM Type</label>
+            <select id="bom_type" name="bom_type" class="form-select" required>
+                <option value="">Select type...</option>
+                <option value="PCB">PCB</option>
+                <option value="Assembly">Assembly</option>
+            </select>
+        </div>
+        <hr style="margin: 2rem 0;">
+        <h3>Components</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">Add components to this BOM</p>
+        <div id="componentsContainer">
+            <div class="component-row" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9ACF59;">
+                <h4 style="margin-bottom: 1rem;">Component 1</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="form-group"><label class="form-label required">Designator</label><input type="text" name="designator_0" class="form-input" required placeholder="e.g., R1, C1, U1"></div>
+                    <div class="form-group"><label class="form-label required">Part Type</label><input type="text" name="part_type_0" class="form-input" required placeholder="e.g., Resistor, Capacitor"></div>
+                    <div class="form-group"><label class="form-label required">Part Value</label><input type="text" name="part_value_0" class="form-input" required placeholder="e.g., 10K, 100nF"></div>
+                    <div class="form-group"><label class="form-label required">Part Description</label><input type="text" name="part_description_0" class="form-input" required placeholder="Description"></div>
+                    <div class="form-group"><label class="form-label required">Footprint</label><input type="text" name="footprint_0" class="form-input" required placeholder="e.g., 0805, SOIC-8"></div>
+                    <div class="form-group"><label class="form-label required">Quantity</label><input type="number" name="qty_0" class="form-input" required min="1" value="1"></div>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="addComponent()">➕ Add Another Component</button>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">💾 Save BOM</button>
+            <a href="{{ url_for(bp ~ '.rnd_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    <div class="mt-4"><a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Back to Biomedical Dashboard</a></div>
+</div>
+<script>
+let componentCount = 1;
+function addComponent() {
+    componentCount++;
+    const container = document.getElementById('componentsContainer');
+    const componentHtml = `
+    <div class="component-row" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9ACF59; position: relative;">
+        <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 1rem; right: 1rem; background: #e74c3c; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">✕ Remove</button>
+        <h4 style="margin-bottom: 1rem;">Component ${componentCount}</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+            <div class="form-group"><label class="form-label required">Designator</label><input type="text" name="designator_${componentCount - 1}" class="form-input" required placeholder="e.g., R1, C1, U1"></div>
+            <div class="form-group"><label class="form-label required">Part Type</label><input type="text" name="part_type_${componentCount - 1}" class="form-input" required placeholder="e.g., Resistor, Capacitor"></div>
+            <div class="form-group"><label class="form-label required">Part Value</label><input type="text" name="part_value_${componentCount - 1}" class="form-input" required placeholder="e.g., 10K, 100nF"></div>
+            <div class="form-group"><label class="form-label required">Part Description</label><input type="text" name="part_description_${componentCount - 1}" class="form-input" required placeholder="Description"></div>
+            <div class="form-group"><label class="form-label required">Footprint</label><input type="text" name="footprint_${componentCount - 1}" class="form-input" required placeholder="e.g., 0805, SOIC-8"></div>
+            <div class="form-group"><label class="form-label required">Quantity</label><input type="number" name="qty_${componentCount - 1}" class="form-input" required min="1" value="1"></div>
+        </div>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', componentHtml);
+}
+</script>
+{% endblock %}

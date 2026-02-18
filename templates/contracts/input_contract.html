@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Input Contract - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Input a contract</h1>
+
+    <div class="mt-4 mb-4">
+        <a href="{{ url_for('contracts_tanks.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    <p class="mb-4">Enter contract details. After saving you will add items.</p>
+
+    <form method="POST" action="{{ url_for('contracts_tanks.input_contract') }}" class="mt-4" style="max-width: 520px;">
+        <div class="form-group">
+            <label for="contract_no" class="form-label required">Contract No.</label>
+            <input type="text" id="contract_no" name="contract_no" class="form-input" required
+                placeholder="e.g. CTR-2024-001">
+        </div>
+        <div class="form-group">
+            <label for="contract_date" class="form-label required">Contract Date</label>
+            <input type="date" id="contract_date" name="contract_date" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="contract_type" class="form-label required">Contract Type</label>
+            <select id="contract_type" name="contract_type" class="form-input" required>
+                <option value="manufacturing">Manufacturing</option>
+                <option value="supply">Supply</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="total_value" class="form-label required">Total Value (Rs.)</label>
+            <input type="number" id="total_value" name="total_value" class="form-input" step="0.01" min="0.01" required
+                placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label for="delivery_deadline" class="form-label required">Delivery Deadline</label>
+            <input type="date" id="delivery_deadline" name="delivery_deadline" class="form-input" required>
+        </div>
+        <div class="form-group">
+            <label for="bg_number" class="form-label required">BG Number</label>
+            <input type="text" id="bg_number" name="bg_number" class="form-input" required placeholder="e.g. BG-001">
+        </div>
+        <div class="form-group">
+            <label for="bg_amount" class="form-label required">BG Amount</label>
+            <input type="number" id="bg_amount" name="bg_amount" class="form-input" step="0.01" min="0.01" required
+                placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label for="bg_expiry_date" class="form-label required">BG Expiry Date</label>
+            <input type="date" id="bg_expiry_date" name="bg_expiry_date" class="form-input" required>
+        </div>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Save and add items</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

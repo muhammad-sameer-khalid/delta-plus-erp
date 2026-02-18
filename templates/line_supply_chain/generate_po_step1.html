@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Generate PO - Step 1 ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Generate Purchase Order ({{ line|capitalize }})</h1>
+    <p>Step 1 of 7: Enter PO Number</p>
+    <div class="mt-4"></div>
+    <div class="form-container mt-4" style="max-width: 600px; margin: 2rem auto;">
+        <form method="POST" action="{{ url_for(bp ~ '.generate_po_select_demand') }}">
+            <div class="form-group">
+                <label for="po_number" class="form-label required">PO Number</label>
+                <input type="text" id="po_number" name="po_number" class="form-input" required placeholder="e.g. PO-001"
+                    pattern="PO-\d+" title="Format: PO-XXX">
+                <small style="color: #666;">Format: PO-XXX (e.g. PO-228)</small>
+            </div>
+            <div class="form-actions mt-4">
+                <a href="{{ url_for(bp ~ '.supply_chain_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Next →</button>
+            </div>
+        </form>
+    </div>
+</div>
+<style>
+    .form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md)
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem
+    }
+</style>
+{% endblock %}

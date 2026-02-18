@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Issue {{ issue.issue_number }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Issue {{ issue.issue_number }} ({{ line|capitalize }})</h1>
+    <p class="mb-2"><strong>PCB/Assembly:</strong> {{ issue.pcb_assembly_name }}</p>
+    <p class="mb-2"><strong>Date issued:</strong> {{ issue.date_issued }}</p>
+    <p class="mb-2"><strong>Issued to:</strong> {{ issue.issued_to }}</p>
+    <p class="mb-4"><strong>Contract/Project:</strong> {{ issue.contract_project }}</p>
+    <h3>Components issued</h3>
+    {% if items %}
+    <div class="table-container mt-2">
+        <table>
+            <thead>
+                <tr>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Part Description</th>
+                    <th>Footprint</th>
+                    <th>Qty</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>{{ it.part_type }}</td>
+                    <td>{{ it.part_value }}</td>
+                    <td>{{ it.part_description }}</td>
+                    <td>{{ it.footprint }}</td>
+                    <td>{{ it.qty }}</td>
+                    <td>
+                        {% if can_delete_items(session['user_email'], line) %}
+                        <form action="{{ url_for(bp ~ '.delete_issue_item', item_id=it.id) }}" method="POST"
+                            onsubmit="return confirm('Are you sure you want to delete this item from the issue?');"
+                            style="display:inline;">
+                            <button type="submit" class="btn btn-danger"
+                                style="padding: 2px 8px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; border-radius: 4px;">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mt-2" style="color: #666;">No components recorded for this issue.</p>
+    {% endif %}
+    <div class="mt-4" style="display: flex; gap: 10px;">
+        <a href="{{ url_for(bp ~ '.view_issues') }}" class="btn btn-secondary">← Back to Issue List</a>
+        {% if can_delete_items(session['user_email'], line) %}
+        <form action="{{ url_for(bp ~ '.delete_issue', issue_number=issue.issue_number) }}" method="POST"
+            onsubmit="return confirm('Are you sure you want to delete this ENTIRE Issue? This cannot be undone.');"
+            style="display:inline;">
+            <button type="submit" class="btn btn-danger"
+                style="background-color: #dc3545; border-color: #dc3545; color: white;">Delete Issue</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

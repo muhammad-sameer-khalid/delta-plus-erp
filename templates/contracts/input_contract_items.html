@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Add contract items - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Add items to contract {{ contract.contract_no }}</h1>
+
+    <div class="mt-4 mb-4">
+        <a href="{{ url_for('contracts_tanks.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    <p class="mb-4">{% if contract_id is none %}Enter items, then click "Save" to save the contract and all items.{%
+        else %}Enter items. Click "Add another item" for more rows, then "Save" when done.{% endif %}</p>
+
+    <form method="POST"
+        action="{% if contract_id is none %}{{ url_for('contracts_tanks.input_contract_items_new') }}{% else %}{{ url_for('contracts_tanks.input_contract_items', contract_id=contract_id) }}{% endif %}"
+        id="itemsForm">
+        <div id="itemsContainer">
+            <div class="item-row mt-3 p-3" style="border: 1px solid #ddd; border-radius: 8px;">
+                <h4 class="mb-2">Item 1</h4>
+                <div class="form-group">
+                    <label class="form-label required">Item name</label>
+                    <input type="text" name="item_name_0" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Part number</label>
+                    <input type="text" name="part_number_0" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Qty</label>
+                    <input type="number" name="qty_0" class="form-input qty-inp" min="1" value="" required
+                        placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Unit price</label>
+                    <input type="number" name="unit_price_0" class="form-input unit-price-inp" step="0.01" min="0"
+                        value="" required placeholder="0.00">
+                </div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button type="button" class="btn btn-secondary" id="btnAddItem">Add another item</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
+
+
+</div>
+
+<script>
+    (function () {
+        var container = document.getElementById('itemsContainer');
+        var count = container.querySelectorAll('.item-row').length;
+        if (count === 0) count = 1;
+
+        document.getElementById('btnAddItem').onclick = function () {
+            var row = document.createElement('div');
+            row.className = 'item-row mt-3 p-3';
+            row.style.border = '1px solid #ddd';
+            row.style.borderRadius = '8px';
+            row.innerHTML = '<h4 class="mb-2">Item ' + (count + 1) + '</h4>' +
+                '<div class="form-group"><label class="form-label required">Item name</label><input type="text" name="item_name_' + count + '" class="form-input" required></div>' +
+                '<div class="form-group"><label class="form-label">Part number</label><input type="text" name="part_number_' + count + '" class="form-input"></div>' +
+                '<div class="form-group"><label class="form-label required">Qty</label><input type="number" name="qty_' + count + '" class="form-input qty-inp" min="1" required placeholder="0"></div>' +
+                '<div class="form-group"><label class="form-label required">Unit price</label><input type="number" name="unit_price_' + count + '" class="form-input unit-price-inp" step="0.01" min="0" required placeholder="0.00"></div>';
+            container.appendChild(row);
+            count++;
+        };
+    })();
+</script>
+{% endblock %}

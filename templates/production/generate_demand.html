@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Demand Note - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Demand Note</h1>
+    <p>Create a new demand note for Supply Chain</p>
+
+    <form method="POST" action="{{ url_for('production.generate_demand') }}" id="demandForm">
+        <!-- Metadata Section -->
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <h3 style="margin-top: 0;">Demand Note Details</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="demand_no" class="form-label required">Demand No.</label>
+                    <input type="number" id="demand_no" name="demand_no" class="form-input" required min="1"
+                        placeholder="Enter demand number">
+                </div>
+
+                <div class="form-group">
+                    <label for="department" class="form-label required">Department</label>
+                    <input type="text" id="department" name="department" class="form-input" required
+                        placeholder="e.g., Production, Assembly">
+                </div>
+
+                <div class="form-group">
+                    <label for="required_date" class="form-label required">Required Date</label>
+                    <input type="date" id="required_date" name="required_date" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="demanded_by" class="form-label required">Demanded By</label>
+                    <input type="text" id="demanded_by" name="demanded_by" class="form-input" required
+                        placeholder="Name of person">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Demand Date</label>
+                <input type="text" class="form-input" value="{{ current_date }}" disabled style="background: #e9ecef;">
+                <small style="color: #666;">Automatically set to current date</small>
+            </div>
+        </div>
+
+        <!-- Components Section -->
+        <div style="margin-bottom: 2rem;">
+            <h3>Components</h3>
+            <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-top: 1rem;">
+                <table class="data-table" style="display: table; width: 100%;">
+                    <thead style="display: table-header-group;">
+                        <tr>
+                            <th style="width: 8%; color: #333;">Sr#</th>
+                            <th style="width: 30%; color: #333;">Part Description</th>
+                            <th style="width: 12%; color: #333;">Qty</th>
+                            <th style="width: 18%; color: #333;">Person's Demand</th>
+                            <th style="width: 15%; color: #333;">Project</th>
+                            <th style="width: 12%; color: #333;">Remarks</th>
+                            <th style="width: 5%; color: #333;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="componentsTable" style="display: table-row-group;">
+                        <tr id="emptyRow" style="background: #f8f9fa;">
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                                No components added yet. Click "Add from BOM" to add components.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" onclick="openBOMSelector()" class="btn btn-secondary mt-3">
+                ➕ Add from BOM
+            </button>
+        </div>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">💾 Create Demand Note</button>
+            <a href="{{ url_for('production.production_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- BOM Selector Modal -->
+<div id="bomSelectorModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <h2>Select BOM</h2>
+        <div class="form-group">
+            <label class="form-label">Search and Select BOM</label>
+            <input type="text" id="bomSearch" class="form-input" placeholder="🔍 Search BOMs..." onkeyup="filterBOMs()"
+                style="margin-bottom: 1rem;">
+            <div id="bomList" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                <!-- BOMs will be loaded here -->
+            </div>
+        </div>
+        <div class="btn-group mt-3">
+            <button type="button" onclick="closeBOMSelector()" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Component Selector Modal -->
+<div id="componentSelectorModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <h2>Select Components from <span id="selectedBOMName"></span></h2>
+
+        <div class="form-group mb-3"
+            style="display: flex; gap: 1rem; align-items: flex-end; background: #f8f9fa; padding: 1rem; border-radius: 4px;">
+            <div style="flex: 1;">
+                <label class="form-label">Quantity of BOM (Multiplier)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="number" id="bomMultiplier" class="form-input" value="1" min="1"
+                        placeholder="Enter number of boards/BOMs">
+                    <button type="button" onclick="applyMultiplier()" class="btn btn-primary"
+                        style="white-space: nowrap;">Apply Multiplier</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="componentsList" style="max-height: 400px; overflow-y: auto;">
+            <!-- Components will be loaded here -->
+        </div>
+        <div class="btn-group mt-3">
+            <button type="button" onclick="addSelectedComponents()" class="btn btn-primary">Add Selected
+                Components</button>
+            <button type="button" onclick="closeComponentSelector()" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let componentCount = 0;
+    let allBOMs = [];
+    let selectedBOMComponents = [];
+
+    // Set today's date for required_date
+    document.addEventListener('DOMContentLoaded', function () {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('required_date').setAttribute('min', today);
+        loadBOMs();
+    });
+
+    // Load all BOMs
+    async function loadBOMs() {
+        try {
+            const response = await fetch('{{ url_for("rnd.get_boms_api") }}');
+            const data = await response.json();
+            if (data.success) {
+                allBOMs = data.boms;
+            }
+        } catch (error) {
+            console.error('Error loading BOMs:', error);
+        }
+    }
+
+    // Open BOM selector modal
+    function openBOMSelector() {
+        const modal = document.getElementById('bomSelectorModal');
+        const bomList = document.getElementById('bomList');
+
+        // Populate BOM list
+        bomList.innerHTML = allBOMs.map(bom => `
+        <div class="bom-item" onclick="selectBOM(${bom.id}, '${bom.bom_name}')" 
+             style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer;">
+            <strong>${bom.bom_name}</strong>
+            <span style="color: #666; margin-left: 1rem;">${bom.bom_type === 'PCB' ? '📟 PCB' : '🔧 Assembly'}</span>
+        </div>
+    `).join('');
+
+        modal.style.display = 'flex';
+    }
+
+    function closeBOMSelector() {
+        document.getElementById('bomSelectorModal').style.display = 'none';
+    }
+
+    // Filter BOMs by search
+    function filterBOMs() {
+        const searchTerm = document.getElementById('bomSearch').value.toLowerCase();
+        const bomList = document.getElementById('bomList');
+
+        const filteredBOMs = allBOMs.filter(bom =>
+            bom.bom_name.toLowerCase().includes(searchTerm) ||
+            bom.bom_type.toLowerCase().includes(searchTerm)
+        );
+
+        bomList.innerHTML = filteredBOMs.map(bom => `
+        <div class="bom-item" onclick="selectBOM(${bom.id}, '${bom.bom_name}')" 
+             style="padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer;">
+            <strong>${bom.bom_name}</strong>
+            <span style="color: #666; margin-left: 1rem;">${bom.bom_type === 'PCB' ? '📟 PCB' : '🔧 Assembly'}</span>
+        </div>
+    `).join('');
+    }
+
+    // Select BOM and load its components
+    async function selectBOM(bomId, bomName) {
+        try {
+            const response = await fetch(`{{ url_for("rnd.get_bom_components_api", bom_id=0) }}`.replace('0', bomId));
+            const data = await response.json();
+
+            if (data.success) {
+                selectedBOMComponents = data.components;
+                document.getElementById('selectedBOMName').textContent = bomName;
+                showComponentSelector();
+            }
+        } catch (error) {
+            console.error('Error loading components:', error);
+        }
+    }
+
+    // Show component selector modal
+    function showComponentSelector() {
+        closeBOMSelector();
+        const modal = document.getElementById('componentSelectorModal');
+        const componentsList = document.getElementById('componentsList');
+        const demandedBy = document.getElementById('demanded_by').value;
+
+        componentsList.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%; color: #333;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                    <th style="width: 25%; color: #333;">Part Description</th>
+                    <th style="width: 15%; color: #333;">Qty</th>
+                    <th style="width: 20%; color: #333;">Person's Demand</th>
+                    <th style="width: 20%; color: #333;">Project</th>
+                    <th style="width: 15%; color: #333;">Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${selectedBOMComponents.map((comp, idx) => `
+                    <tr>
+                        <td><input type="checkbox" class="comp-checkbox" data-index="${idx}" checked></td>
+                        <td>${comp.part_description || comp.part_value || '-'}</td>
+                        <td>
+                            <input type="number" id="qty_${idx}" value="${comp.qty || 1}" min="1" class="form-input qty-input" style="width: 80px;" data-base-qty="${comp.qty || 1}">
+                        </td>
+                        <td><input type="text" id="person_${idx}" value="${demandedBy}" class="form-input"></td>
+                        <td><input type="text" id="project_${idx}" value="" class="form-input" placeholder="Project name"></td>
+                        <td><input type="text" id="remarks_${idx}" value="" class="form-input" placeholder="Optional"></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+        // Reset multiplier input
+        document.getElementById('bomMultiplier').value = 1;
+        modal.style.display = 'flex';
+    }
+
+    // Apply multiplier to all quantities
+    function applyMultiplier() {
+        const multiplier = parseInt(document.getElementById('bomMultiplier').value) || 1;
+        if (multiplier < 1) {
+            alert('Multiplier must be at least 1');
+            return;
+        }
+
+        const qtyInputs = document.querySelectorAll('.qty-input');
+        qtyInputs.forEach(input => {
+            const baseQty = parseInt(input.getAttribute('data-base-qty')) || 1;
+            input.value = baseQty * multiplier;
+        });
+    }
+
+    function closeComponentSelector() {
+        document.getElementById('componentSelectorModal').style.display = 'none';
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.comp-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    }
+
+    // Add selected components to the demand note
+    function addSelectedComponents() {
+        const checkboxes = document.querySelectorAll('.comp-checkbox:checked');
+        const table = document.getElementById('componentsTable');
+
+        // Remove empty row if it exists
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        checkboxes.forEach(checkbox => {
+            const idx = checkbox.dataset.index;
+            const comp = selectedBOMComponents[idx];
+            const qty = parseInt(document.getElementById(`qty_${idx}`).value);
+            const person = document.getElementById(`person_${idx}`).value.trim();
+            const project = document.getElementById(`project_${idx}`).value.trim();
+            const remarks = document.getElementById(`remarks_${idx}`).value.trim();
+            const partDesc = comp.part_description || comp.part_value || '-';
+
+            // Check for duplicate component
+            let foundDuplicate = false;
+            const rows = table.getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].cells;
+                if (cells.length >= 6) {
+                    const existingPartDesc = cells[1].textContent.trim().split('\n')[0].trim();
+                    const existingQtyInput = cells[2].querySelector('input[type="number"]');
+                    const existingProjectInput = cells[4].querySelector('input[type="text"]');
+                    const existingRemarksInput = cells[5].querySelector('input[type="text"]');
+                    if (existingQtyInput && existingProjectInput && existingRemarksInput) {
+                        if (existingPartDesc === partDesc &&
+                            existingProjectInput.value.trim() === project &&
+                            existingRemarksInput.value.trim() === remarks) {
+                            existingQtyInput.value = parseInt(existingQtyInput.value) + qty;
+                            foundDuplicate = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (foundDuplicate) return;
+
+            const newRow = table.insertRow();
+            newRow.className = 'component-row';
+
+            newRow.innerHTML = `
+            <td>${componentCount + 1}</td>
+            <td>${comp.part_description || comp.part_value || '-'}
+                <input type="hidden" name="part_type_${componentCount}" value="${comp.part_type || ''}">
+                <input type="hidden" name="part_value_${componentCount}" value="${comp.part_value || ''}">
+                <input type="hidden" name="part_description_${componentCount}" value="${comp.part_description || comp.part_value || ''}">
+                <input type="hidden" name="footprint_${componentCount}" value="${comp.footprint || ''}">
+            </td>
+            <td><input type="number" name="qty_${componentCount}" class="form-input" value="${qty}" min="1" required></td>
+            <td><input type="text" name="persons_demand_${componentCount}" class="form-input" value="${person}"></td>
+            <td><input type="text" name="project_${componentCount}" class="form-input" value="${project}"></td>
+            <td><input type="text" name="remarks_${componentCount}" class="form-input" value="${remarks}"></td>
+            <td><button type="button" onclick="deleteComponent(this)" class="btn btn-danger" style="padding: 0.4rem 0.8rem;">🗑️</button></td>
+        `;
+
+            componentCount++;
+        });
+
+        updateRowNumbers();
+        closeComponentSelector();
+    }
+
+    function deleteComponent(button) {
+        if (confirm('Are you sure you want to delete this component?')) {
+            const row = button.closest('tr');
+            row.remove();
+            updateRowNumbers();
+            renumberInputs();
+        }
+    }
+
+    function updateRowNumbers() {
+        const table = document.getElementById('componentsTable');
+        const rows = table.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].cells[0].textContent = i + 1;
+        }
+    }
+
+    function renumberInputs() {
+        const table = document.getElementById('componentsTable');
+        const rows = table.getElementsByTagName('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            const inputs = rows[i].querySelectorAll('input');
+            inputs.forEach(input => {
+                const nameParts = input.name.split('_');
+                if (nameParts.length >= 2) {
+                    const fieldName = nameParts.slice(0, -1).join('_');
+                    input.name = `${fieldName}_${i}`;
+                }
+            });
+        }
+
+        componentCount = rows.length;
+    }
+
+    // Form validation
+    document.getElementById('demandForm').addEventListener('submit', function (e) {
+        const table = document.getElementById('componentsTable');
+        if (table.rows.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one component to the demand note.');
+            return false;
+        }
+    });
+</script>
+
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .bom-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .component-row td {
+        padding: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .component-row input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .component-row input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+    .data-table thead {
+        background: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .data-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .data-table td {
+        border-bottom: 1px solid #eee;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}

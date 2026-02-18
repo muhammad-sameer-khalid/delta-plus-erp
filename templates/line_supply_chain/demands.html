@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Approved Demands ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1>Approved Demand Notes ({{ line|capitalize }})</h1>
+            <p>Demand notes approved by Director - Click to view details</p>
+        </div>
+        <a href="{{ url_for(bp ~ '.supply_chain_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+    {% if demands %}
+    <div class="list-container mt-4">
+        {% for demand in demands %}
+        <div class="list-item"
+            onclick="window.location.href='{{ url_for(bp ~ '.view_demand', demand_no=demand.demand_no) }}'">
+            <div class="list-item-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h4>Demand Note #{{ demand.demand_no }}</h4>
+                    <form action="{{ url_for(bp ~ '.archive_demand', demand_no=demand.demand_no) }}" method="POST"
+                        onclick="event.stopPropagation();"
+                        onsubmit="return confirm('Are you sure you want to remove this demand note from the list?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                            title="Remove from list">Remove</button>
+                    </form>
+                </div>
+                <div class="list-item-meta">
+                    <span><strong>Department:</strong> {{ demand.department }}</span>
+                    <span><strong>Date:</strong> {{ demand.demand_date.strftime('%Y-%m-%d') if demand.demand_date else
+                        'N/A' }}</span>
+                    <span><strong>Required:</strong> {{ demand.required_date.strftime('%Y-%m-%d') if
+                        demand.required_date else 'N/A' }}</span>
+                    <span><strong>By:</strong> {{ demand.demanded_by }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666; font-size: 1.1rem;">No approved demand notes found</p>
+        <p style="color: #999; margin-top: 0.5rem;">Demand notes must be approved by Director and GM before appearing
+            here.</p>
+    </div>
+    {% endif %}
+</div>
+<style>
+    .list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem
+    }
+
+    .list-item {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary-color);
+        padding: 1.5rem;
+        cursor: pointer;
+        border-radius: 4px
+    }
+
+    .list-item:hover {
+        background: #f5f5f5
+    }
+
+    .list-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        color: #666
+    }
+</style>
+{% endblock %}

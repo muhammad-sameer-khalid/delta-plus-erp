@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Purchase Order - Supplier Info - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Purchase Order: {{ po_number }}</h1>
+    <p>Step 5 of 7: Enter Supplier Information</p>
+
+    <div class="form-container mt-4" style="max-width: 700px; margin: 2rem auto;">
+        <form method="POST" action="{{ url_for('supply_chain.generate_po_finalize') }}">
+            <div class="form-group">
+                <label for="name" class="form-label required">Supplier Name</label>
+                <input type="text" id="name" name="name" class="form-input" 
+                       required placeholder="e.g. Mr. Rock">
+            </div>
+
+            <div class="form-group">
+                <label for="company" class="form-label required">Company Name</label>
+                <input type="text" id="company" name="company" class="form-input" 
+                       required placeholder="e.g. Shenzen Tianyue Electronic Co., Ltd">
+            </div>
+
+            <div class="form-group">
+                <label for="address" class="form-label required">Address</label>
+                <textarea id="address" name="address" class="form-input" rows="3" 
+                          required placeholder="Full address"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="telephone" class="form-label required">Telephone</label>
+                <input type="text" id="telephone" name="telephone" class="form-input" 
+                       required placeholder="e.g. 1558484857293">
+            </div>
+
+            <div class="form-group">
+                <label for="postal_code" class="form-label required">Postal Code</label>
+                <input type="text" id="postal_code" name="postal_code" class="form-input" 
+                       required placeholder="e.g. 518000">
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('supply_chain.generate_po_review') }}" class="btn btn-secondary">← Back to Review</a>
+                <button type="submit" class="btn btn-primary">Generate PO →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-container {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+</style>
+{% endblock %}

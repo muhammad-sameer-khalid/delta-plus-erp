@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Choose method - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – {{ mode|title }} info</h1>
+    <p class="mb-4">Choose how to enter {{ mode }} for each item.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+        <div class="card-bordered" style="cursor: pointer;" onclick="window.location.href='{{ iterate_url }}'">
+            <h4>Iterate through each item</h4>
+            <p>Enter {{ mode }} for each item one by one.</p>
+        </div>
+        <div class="card-bordered" style="cursor: pointer;" onclick="window.location.href='{{ specific_url }}'">
+            <h4>Enter for specific items only</h4>
+            <p>Search and select items to enter {{ mode }}.</p>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        {% if mode == 'inspection' %}
+        <a href="{{ url_for('contracts_tanks.input_inspection_list') }}" class="btn btn-secondary">← Back</a>
+        {% elif mode == 'delivery' %}
+        <a href="{{ url_for('contracts_tanks.input_delivery_list') }}" class="btn btn-secondary">← Back</a>
+        {% elif mode == 'crv' %}
+        <a href="{{ url_for('contracts_tanks.input_crv_list') }}" class="btn btn-secondary">← Back</a>
+        {% elif mode == 'payment' %}
+        <a href="{{ url_for('contracts_tanks.input_payment_list') }}" class="btn btn-secondary">← Back</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

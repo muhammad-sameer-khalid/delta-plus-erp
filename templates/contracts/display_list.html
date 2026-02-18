@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Display contracts - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Display contracts</h1>
+    <p class="mb-4">Search and open a contract to view details.</p>
+
+    <div class="form-group" style="max-width: 400px;">
+        <label class="form-label">Search by contract number</label>
+        <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="searchContractInput" class="form-input" placeholder="Type to search..."
+                value="{{ search_q or '' }}" autocomplete="off">
+        </div>
+    </div>
+
+    <div id="contractsTableContainer" class="table-container mt-4"
+        style="display: {{ 'block' if contracts else 'none' }};">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract No.</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Total Value (Rs.)</th>
+                    <th>Status</th>
+                    <th>Amount Given</th>
+                    <th>Qty balance</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="contractsTableBody">
+                {% for c in contracts %}
+                <tr>
+                    <td>{{ c.contract_no }}</td>
+                    <td>{{ c.contract_date }}</td>
+                    <td>{{ c.contract_type }}</td>
+                    <td>{{ c.total_value }}</td>
+                    <td>{{ c.contract_status }}</td>
+                    <td>{{ c.amount_given or 0 }}</td>
+                    <td>{{ c.amount_balance or 0 }}</td>
+                    <td>
+                        <a href="{{ url_for('contracts_tanks.display_contract_detail', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">View</a>
+                        {% if can_delete_items(session['user_email'], 'tanks') %}
+                        <form action="{{ url_for('contracts_tanks.delete_contract', contract_id=c.contract_id) }}"
+                            method="POST"
+                            onsubmit="return confirm('Are you sure you want to delete this contract? This checks cannot be undone.');"
+                            style="display:inline;">
+                            <button type="submit" class="btn btn-danger"
+                                style="padding: 2px 8px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; border-radius: 4px;">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="noContractsMsg" class="mt-4" style="color: #666; display: {{ 'none' if contracts else 'block' }};">
+        <p>No contracts found.</p>
+    </div>
+
+    <script>
+        (function () {
+            const searchInput = document.getElementById('searchContractInput');
+            const tableContainer = document.getElementById('contractsTableContainer');
+            const tableBody = document.getElementById('contractsTableBody');
+            const noMsgDiv = document.getElementById('noContractsMsg');
+            let searchTimeout = null;
+
+            function renderTable(contracts) {
+                if (!contracts || contracts.length === 0) {
+                    if (tableContainer) tableContainer.style.display = 'none';
+                    if (noMsgDiv) noMsgDiv.style.display = 'block';
+                    return;
+                }
+
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (noMsgDiv) noMsgDiv.style.display = 'none';
+
+                tableBody.innerHTML = contracts.map(c => `
+                <tr>
+                    <td>${c.contract_no || ''}</td>
+                    <td>${c.contract_date || ''}</td>
+                    <td>${c.contract_type || ''}</td>
+                    <td>${c.total_value || ''}</td>
+                    <td>${c.contract_status || ''}</td>
+                    <td>${c.amount_given || 0}</td>
+                    <td>${c.amount_balance || 0}</td>
+                    <td>
+                        <a href="/contracts/display-contract/${c.contract_id}" class="btn btn-primary">View</a>
+                        {% if can_delete_items(session['user_email'], 'tanks') %}
+                        <form action="/tanks/contracts/delete-contract/${c.contract_id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this contract? This checks cannot be undone.');" style="display:inline;">
+                            <button type="submit" class="btn btn-danger" style="padding: 2px 8px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; border-radius: 4px;">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            `).join('');
+            }
+
+            searchInput.addEventListener('input', function () {
+                const q = this.value.trim();
+                clearTimeout(searchTimeout);
+
+                searchTimeout = setTimeout(function () {
+                    fetch('{{ url_for("contracts_tanks.api_search_contracts") }}?q=' + encodeURIComponent(q))
+                        .then(r => r.json())
+                        .then(data => {
+                            renderTable(data.contracts);
+                        })
+                        .catch(err => console.error('Search failed', err));
+                }, 300);
+            });
+        })();
+    </script>
+
+    <div class="mt-4">
+        <a href="{{ url_for('contracts_tanks.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+</div>
+{% endblock %}

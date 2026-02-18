@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}GM Approvals - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>GM Approvals</h1>
+    <p>Demand notes approved by Director, pending your final approval</p>
+
+    {% if demands %}
+    <div class="table-container mt-4">
+        <table>
+            <thead>
+                <tr>
+                    <th>Demand No.</th>
+                    <th>Department</th>
+                    <th>Demanded By</th>
+                    <th>Required Date</th>
+                    <th>Approved By Director</th>
+                    <th>Director Approved At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for demand in demands %}
+                <tr>
+                    <td><strong>{{ demand.demand_no }}</strong></td>
+                    <td>{{ demand.department }}</td>
+                    <td>{{ demand.demanded_by }}</td>
+                    <td>{{ demand.required_date }}</td>
+                    <td>{{ demand.approved_by_director or 'N/A' }}</td>
+                    <td>{{ demand.director_approved_at.strftime('%Y-%m-%d %H:%M') if demand.director_approved_at else
+                        'N/A' }}</td>
+                    <td>
+                        {% if line is defined and line == 'biomedical' %}
+                        <a href="{{ url_for('gm_approve_view_biomedical', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% elif line is defined and line == 'battery' %}
+                        <a href="{{ url_for('gm_approve_view_battery', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% else %}
+                        <a href="{{ url_for('gm_approve_view', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 2rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666;">No demand notes pending GM approval</p>
+    </div>
+    {% endif %}
+
+    <div class="btn-group mt-4">
+        {% if line is defined and line == 'biomedical' %}
+        <a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Back to Biomedical Dashboard</a>
+        {% elif line is defined and line == 'battery' %}
+        <a href="{{ url_for('battery_dashboard') }}" class="btn btn-secondary">← Back to Battery Dashboard</a>
+        {% else %}
+        <a href="{{ url_for('tanks_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

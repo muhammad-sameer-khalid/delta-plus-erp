@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Contracts - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Contracts</h1>
+    <p class="mb-4">Manage contracts, inspection, delivery, CRV, and payment info.</p>
+
+    <div class="mt-4" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('contracts_tanks.input_contract') }}'"
+            style="cursor: pointer;">
+            <h4>1. Input a contract</h4>
+            <p>Create new contract and add items</p>
+        </div>
+        <div class="card-bordered"
+            onclick="window.location.href='{{ url_for('contracts_tanks.input_inspection_list') }}'"
+            style="cursor: pointer;">
+            <h4>2. Input inspection info</h4>
+            <p>Inspection note no. and date per item</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('contracts_tanks.input_delivery_list') }}'"
+            style="cursor: pointer;">
+            <h4>3. Input delivery info</h4>
+            <p>Delivered amount, delivery no. and date</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('contracts_tanks.input_crv_list') }}'"
+            style="cursor: pointer;">
+            <h4>4. Input CRV info</h4>
+            <p>CRV no. and date per item</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('contracts_tanks.input_payment_list') }}'"
+            style="cursor: pointer;">
+            <h4>5. Input payment and account info</h4>
+            <p>Invoice, LD, net amount, cheque, bank deposit</p>
+        </div>
+        <div class="card-bordered"
+            onclick="window.location.href='{{ url_for('contracts_tanks.display_contract_list') }}'"
+            style="cursor: pointer;">
+            <h4>6. Display contract</h4>
+            <p>View all contracts and details</p>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+</div>
+{% endblock %}

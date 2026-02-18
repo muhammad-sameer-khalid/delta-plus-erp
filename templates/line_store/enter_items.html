@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Enter Store Items ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Enter Store Items ({{ line|capitalize }})</h1>
+    <p>Add QC approved items to inventory</p>
+    <div class="mt-4"><a href="{{ url_for(bp ~ '.store_dashboard') }}" class="btn btn-secondary mb-3">← Back to Store
+            Dashboard</a></div>
+    {% if approved_items %}
+    <!-- Search Box -->
+    <div class="mt-4 mb-4" style="max-width: 500px;">
+        <input type="text" id="entrySearch" class="form-input"
+            placeholder="🔍 Search items by type, value, description..." onkeyup="filterEntries()"
+            style="padding: 0.75rem 1rem; width: 100%;">
+    </div>
+    <div class="table-container mt-4">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Part Description</th>
+                    <th>Footprint</th>
+                    <th>Qty</th>
+                    <th>PO No.</th>
+                    <th>Project</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in approved_items %}
+                <tr>
+                    <td>{% if item.item_type == 'component' %}🔩 Component{% else %}📦 Product{% endif %}</td>
+                    <td>{{ item.part_type or 'N/A' }}</td>
+                    <td>{{ item.part_value or 'N/A' }}</td>
+                    <td>{{ item.part_description or item.pcb_assembly_name or 'N/A' }}</td>
+                    <td>{{ item.footprint or 'N/A' }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ item.po_no or 'N/A' }}</td>
+                    <td>{{ item.project_number or '-' }}</td>
+                    <td><button onclick="enterItem({{ item.id }})" class="btn btn-primary"
+                            style="padding: 0.4rem 0.8rem;">📥 Enter to Store</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666;">No items pending entry to store</p>
+    </div>
+    {% endif %}
+    <div class="mt-4"></div>
+</div>
+<div id="enterItemModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Enter Item to Store</h3><span class="modal-close" onclick="closeModal('enterItemModal')">✕</span>
+        </div>
+        <form id="enterItemForm" method="POST">
+            <div class="form-group">
+                <label for="category" class="form-label required">Category</label>
+                <select id="category" name="category" class="form-select" required>
+                    <option value="">Select category...</option>
+                    {% for cat_id, cat_name in categories %}<option value="{{ cat_id }}">{{ loop.index }}. {{ cat_name
+                        }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="section" class="form-label required">Section</label>
+                <input type="text" id="section" name="section" class="form-input" required
+                    placeholder="e.g., A1, Shelf 3">
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-success">✓ Add to Store</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('enterItemModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    function filterEntries() {
+        const input = document.getElementById('entrySearch');
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const content = row.innerText.toLowerCase();
+            if (content.includes(filter)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    function enterItem(itemId) {
+        document.getElementById('enterItemForm').action = "{{ url_for(bp ~ '.add_to_store', item_id=0) }}".replace('0', itemId);
+        document.getElementById('enterItemModal').classList.add('active');
+    }
+    function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+</script>
+{% endblock %}

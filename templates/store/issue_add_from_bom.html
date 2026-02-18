@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Add Items from BOM - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Add Items from BOM</h1>
+    <p class="mb-4">Issue: <strong>{{ session.pending_issue.issue_number }}</strong></p>
+
+    <div class="form-group">
+        <label class="form-label">Search BOM by name</label>
+        <input type="text" id="searchBom" class="form-input" placeholder="Type BOM name..." autocomplete="off">
+        <div id="bomResults" class="search-results-dropdown" style="display: none; position: absolute; z-index: 100; background: #fff; border: 1px solid #ccc; max-height: 260px; overflow-y: auto; width: 100%; max-width: 500px;"></div>
+    </div>
+
+    <div id="bomQtySection" style="display: none; margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <label class="form-label">How many sets of this BOM to issue?</label>
+        <input type="number" id="bomQtyInput" min="1" value="1" class="form-input" style="max-width: 120px;">
+        <button type="button" class="btn btn-primary ml-2" id="btnLoadBom">Load from store</button>
+    </div>
+
+    <div id="bomDetail" style="display: none; margin-top: 1.5rem;">
+        <h3 id="bomDetailTitle"></h3>
+        <p id="bomDetailSubtitle" class="mb-2" style="color: #666;"></p>
+        <div id="inStoreList" class="table-container mt-2"></div>
+        <div id="insufficientList" class="mt-3" style="padding: 1rem; background: #e7f1ff; border: 1px solid #b6d4fe; border-radius: 8px; display: none;"></div>
+        <div id="missingList" class="mt-3" style="padding: 1rem; background: #fff3cd; border-radius: 8px;"></div>
+        <div class="mt-3">
+            <button type="button" class="btn btn-primary" id="btnAddBomItems">Add these items to issue</button>
+        </div>
+    </div>
+
+    <h3 class="mt-4">Items in this issue</h3>
+    <div id="itemsList" class="table-container mt-2">
+        <table>
+            <thead>
+                <tr>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Part Description</th>
+                    <th>Footprint</th>
+                    <th>Qty</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTableBody"></tbody>
+        </table>
+        <p id="noItemsMsg" style="display: none; color: #666;">No items added yet.</p>
+    </div>
+
+    <div class="mt-4 btn-group">
+        <form method="POST" action="{{ url_for('store.issue_submit') }}" id="formIssue" style="display: inline;">
+            <button type="submit" class="btn btn-primary" id="btnIssue" disabled>Issue</button>
+        </form>
+        <a href="{{ url_for('store.issue_select_method') }}" class="btn btn-secondary">← Back to method</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('searchBom');
+    const bomResults = document.getElementById('bomResults');
+    const bomQtySection = document.getElementById('bomQtySection');
+    const bomQtyInput = document.getElementById('bomQtyInput');
+    const btnLoadBom = document.getElementById('btnLoadBom');
+    const bomDetail = document.getElementById('bomDetail');
+    const bomDetailTitle = document.getElementById('bomDetailTitle');
+    const bomDetailSubtitle = document.getElementById('bomDetailSubtitle');
+    const inStoreList = document.getElementById('inStoreList');
+    const insufficientList = document.getElementById('insufficientList');
+    const missingList = document.getElementById('missingList');
+    const btnAddBomItems = document.getElementById('btnAddBomItems');
+    const itemsTableBody = document.getElementById('itemsTableBody');
+    const noItemsMsg = document.getElementById('noItemsMsg');
+    const btnIssue = document.getElementById('btnIssue');
+
+    let currentBomId = null;
+    let currentBomData = null;
+    let searchTimeout = null;
+
+    searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
+        clearTimeout(searchTimeout);
+        bomResults.style.display = 'none';
+        bomDetail.style.display = 'none';
+        if (q.length < 1) {
+            fetch('{{ url_for("store.api_search_boms") }}?q=')
+                .then(r => r.json())
+                .then(data => {
+                    const boms = data.boms || [];
+                    bomResults.innerHTML = boms.map(b => '<div class="search-result-item p-2" data-id="' + b.id + '" data-name="' + (b.bom_name || '').replace(/"/g, '&quot;') + '" style="cursor: pointer; border-bottom: 1px solid #eee;">' + (b.bom_name || '') + ' (' + (b.bom_type || '') + ')</div>').join('');
+                    bomResults.style.display = 'block';
+                });
+            return;
+        }
+        searchTimeout = setTimeout(function() {
+            fetch('{{ url_for("store.api_search_boms") }}?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    const boms = data.boms || [];
+                    bomResults.innerHTML = boms.map(b => '<div class="search-result-item p-2" data-id="' + b.id + '" data-name="' + (b.bom_name || '').replace(/"/g, '&quot;') + '" style="cursor: pointer; border-bottom: 1px solid #eee;">' + (b.bom_name || '') + ' (' + (b.bom_type || '') + ')</div>').join('');
+                    bomResults.style.display = 'block';
+                });
+        }, 200);
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (searchInput.value.trim().length === 0) {
+            fetch('{{ url_for("store.api_search_boms") }}?q=')
+                .then(r => r.json())
+                .then(data => {
+                    const boms = data.boms || [];
+                    bomResults.innerHTML = boms.map(b => '<div class="search-result-item p-2" data-id="' + b.id + '" data-name="' + (b.bom_name || '').replace(/"/g, '&quot;') + '" style="cursor: pointer; border-bottom: 1px solid #eee;">' + (b.bom_name || '') + ' (' + (b.bom_type || '') + ')</div>').join('');
+                    bomResults.style.display = 'block';
+                });
+        }
+    });
+
+    bomResults.addEventListener('click', function(e) {
+        const el = e.target.closest('.search-result-item');
+        if (!el) return;
+        currentBomId = el.dataset.id;
+        bomResults.style.display = 'none';
+        bomDetail.style.display = 'none';
+        bomQtySection.style.display = 'block';
+        bomQtyInput.value = '1';
+        bomQtyInput.focus();
+    });
+
+    btnLoadBom.addEventListener('click', function() {
+        if (!currentBomId) return;
+        const qty = Math.max(1, parseInt(bomQtyInput.value, 10) || 1);
+        fetch('{{ url_for("store.api_bom_components", bom_id=0) }}'.replace('0', currentBomId) + '?qty=' + qty)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { alert(data.error); return; }
+                currentBomData = data;
+                bomDetailTitle.textContent = 'BOM: ' + (data.bom_name || '');
+                bomDetailSubtitle.textContent = 'Quantity: ' + (data.bom_qty || 1) + ' set(s). Only available amounts are issued; items not in store are listed below.';
+                if (data.in_store && data.in_store.length > 0) {
+                    inStoreList.innerHTML = '<table><thead><tr><th>Part Type</th><th>Part Value</th><th>Part Description</th><th>Footprint</th><th>Required</th><th>In store</th><th>Will issue</th><th>Status</th></tr></thead><tbody>' +
+                        data.in_store.map(it => {
+                            var status = (it.insufficient ? '<span style="color: #0d6efd;">Insufficient</span>' : 'OK');
+                            return '<tr><td>' + (it.part_type || '') + '</td><td>' + (it.part_value || '') + '</td><td>' + (it.part_description || '') + '</td><td>' + (it.footprint || '') + '</td><td>' + (it.required || it.bom_qty) + '</td><td>' + it.store_qty + '</td><td>' + it.issue_qty + '</td><td>' + status + '</td></tr>';
+                        }).join('') +
+                        '</tbody></table>';
+                } else {
+                    inStoreList.innerHTML = '<p>No components from this BOM are available in store (or required qty is 0).</p>';
+                }
+                var insufficientItems = (data.in_store || []).filter(it => it.insufficient);
+                if (insufficientItems.length > 0) {
+                    insufficientList.style.display = 'block';
+                    insufficientList.innerHTML = '<strong>Insufficient quantity in store</strong><p class="mb-2 mt-1" style="color: #333;">The following items have less than the required amount in store. The available quantity will be added to the issue when you click "Add these items to issue".</p><ul class="mt-2">' +
+                        insufficientItems.map(m => '<li>' + (m.part_type || '') + ' | ' + (m.part_value || '') + ' | ' + (m.part_description || '') + ' — Required: ' + m.required + ', In store: ' + m.store_qty + ', Will add: ' + m.issue_qty + '</li>').join('') + '</ul>';
+                } else {
+                    insufficientList.style.display = 'none';
+                    insufficientList.innerHTML = '';
+                }
+                if (data.missing && data.missing.length > 0) {
+                    missingList.innerHTML = '<strong>Not in store:</strong><p class="mb-2 mt-1" style="color: #333;">The following items are not in store and will not be added to the issue.</p><ul class="mt-2">' +
+                        data.missing.map(m => '<li>' + (m.part_type || '') + ' | ' + (m.part_value || '') + ' | ' + (m.part_description || '') + ' — Required: ' + m.qty + '</li>').join('') + '</ul>';
+                } else {
+                    missingList.innerHTML = '';
+                }
+                bomDetail.style.display = 'block';
+                bomQtySection.style.display = 'none';
+            });
+    });
+
+    btnAddBomItems.addEventListener('click', function() {
+        if (!currentBomData || !currentBomData.in_store || currentBomData.in_store.length === 0) return;
+        const items = currentBomData.in_store.map(it => ({
+            part_type: it.part_type,
+            part_value: it.part_value,
+            part_description: it.part_description,
+            footprint: it.footprint,
+            qty: it.issue_qty || 0,
+            store_category: it.store_category,
+            store_id: it.store_id
+        })).filter(it => it.qty > 0);
+        if (items.length === 0) return;
+        fetch('{{ url_for("store.issue_add_bom_items") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: items })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            currentBomData = null;
+            bomDetail.style.display = 'none';
+            searchInput.value = '';
+            renderTable(data.items || []);
+        })
+        .catch(() => alert('Failed to add items'));
+    });
+
+    function renderTable(items) {
+        if (!items) {
+            fetch('{{ url_for("store.api_pending_items") }}')
+                .then(r => r.json())
+                .then(data => { renderTable(data.items || []); });
+            return;
+        }
+        if (items.length === 0) {
+            itemsTableBody.innerHTML = '';
+            noItemsMsg.style.display = 'block';
+            btnIssue.disabled = true;
+        } else {
+            noItemsMsg.style.display = 'none';
+            btnIssue.disabled = false;
+            itemsTableBody.innerHTML = items.map(it =>
+                '<tr><td>' + (it.part_type || '') + '</td><td>' + (it.part_value || '') + '</td><td>' + (it.part_description || '') + '</td><td>' + (it.footprint || '') + '</td><td>' + it.qty + '</td></tr>'
+            ).join('');
+        }
+    }
+    renderTable(null);
+})();
+</script>
+{% endblock %}

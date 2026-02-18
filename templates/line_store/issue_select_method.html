@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Select Items ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Add Items to Issue</h1>
+    {% if pending_issue %}
+    <p class="mb-2">Issue: <strong>{{ pending_issue.issue_number }}</strong> — {{ pending_issue.pcb_assembly_name }}</p>
+    {% endif %}
+    <p class="mb-4">Choose how to add items:</p>
+    <div class="mt-4" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.issue_add_from_bom') }}'" style="cursor: pointer;">
+            <h4>Select from BOM</h4>
+            <p>Pick a Bill of Materials and add all its components that are in store.</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.issue_add_separate') }}'" style="cursor: pointer;">
+            <h4>Select Separate Items</h4>
+            <p>Search and add items from the store one by one.</p>
+        </div>
+    </div>
+    <div class="mt-4"><a href="{{ url_for(bp ~ '.issue_items') }}" class="btn btn-secondary">← Back to Issue Details</a></div>
+</div>
+{% endblock %}

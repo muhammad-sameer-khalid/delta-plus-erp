@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Store ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Store Department ({{ line|capitalize }})</h1>
+    <p>Inventory Management and Issuing</p>
+    <div class="mt-4"></div>
+    <div class="mt-4">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.enter_items') }}'">
+            <h4>Enter Store Items</h4>
+            <p>Add QC approved items to inventory</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.view_items') }}'">
+            <h4>View Store Items</h4>
+            <p>Browse inventory by category</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.issue_items') }}'">
+            <h4>Issue Items</h4>
+            <p>Issue items against demand notes</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.view_issues') }}'">
+            <h4>View Issues</h4>
+            <p>View issue history</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

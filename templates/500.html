@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Something went wrong - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center" style="padding: 4rem 2rem;">
+        <h1 style="font-size: 4rem; color: #9ACF59;">500</h1>
+        <h2>Something went wrong</h2>
+        <p style="color: #666; margin: 1.5rem 0;">An unexpected error occurred. Please try again or contact support.</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">← Back to main menu</a>
+    </div>
+</div>
+{% endblock %}

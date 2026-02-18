@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <h2>Delta Plus ERP</h2>
+        <p class="text-center mb-3" style="color: #666;">Sign in to access your account</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="email" class="form-label required">Email Address</label>
+                <input type="email" id="email" name="email" class="form-input" required placeholder="Enter your email">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label required">Password</label>
+                <input type="password" id="password" name="password" class="form-input" required
+                    placeholder="Enter your password">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Sign In
+            </button>
+        </form>
+
+        <div class="alert alert-info mt-3" style="font-size: 0.9em; text-align: left; background-color: #e7f3fe; color: #31708f; padding: 10px; border: 1px solid #bce8f1; border-radius: 4px;">
+            <strong>Note:</strong> Run the following on PowerShell to allow other computers to access the site through the firewall:
+            <code style="display:block; margin-top:5px; word-break: break-all; background-color: #f7f7f9; padding: 5px; border-radius: 3px; border: 1px solid #e1e1e8; color: #d63384;">New-NetFirewallRule -DisplayName "Delta Plus ERP" -Direction Inbound -LocalPort 5000 -Protocol TCP -Action Allow</code>
+        </div>
+
+
+    </div>
+</div>
+{% endblock %}

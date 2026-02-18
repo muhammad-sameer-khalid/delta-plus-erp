@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Select contract - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Select contract</h1>
+
+    <div class="mt-4 mb-4">
+        <a href="{{ url_for('contracts_tanks.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    <p class="mb-4">Search and select a contract to enter {{ mode }} info.</p>
+
+    <div class="form-group" style="max-width: 400px;">
+        <label class="form-label">Search by contract number</label>
+        <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="searchContractInput" class="form-input" placeholder="Type to search..."
+                value="{{ search_q or '' }}" autocomplete="off">
+        </div>
+    </div>
+
+    <div id="contractsTableContainer" class="table-container mt-4"
+        style="display: {{ 'block' if contracts else 'none' }};">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract No.</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Total Value</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="contractsTableBody">
+                {% for c in contracts %}
+                <tr>
+                    <td>{{ c.contract_no }}</td>
+                    <td>{{ c.contract_date }}</td>
+                    <td>{{ c.contract_type }}</td>
+                    <td>{{ c.total_value }}</td>
+                    <td>{{ c.contract_status }}</td>
+                    <td>
+                        {% if mode == 'inspection' %}
+                        <a href="{{ url_for('contracts_tanks.input_inspection_choose', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% elif mode == 'delivery' %}
+                        <a href="{{ url_for('contracts_tanks.input_delivery_choose', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% elif mode == 'crv' %}
+                        <a href="{{ url_for('contracts_tanks.input_crv_choose', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% elif mode == 'payment' %}
+                        <a href="{{ url_for('contracts_tanks.input_payment_choose', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="noContractsMsg" class="mt-4" style="color: #666; display: {{ 'none' if contracts else 'block' }};">
+        <p>No contracts found.</p>
+    </div>
+
+    <script>
+        (function () {
+            const searchInput = document.getElementById('searchContractInput');
+            const tableContainer = document.getElementById('contractsTableContainer');
+            const tableBody = document.getElementById('contractsTableBody');
+            const noMsgDiv = document.getElementById('noContractsMsg');
+            const mode = "{{ mode }}";
+            let searchTimeout = null;
+
+            function getActionUrl(contractId) {
+                if (mode === 'inspection') return `/contracts/input-inspection/${contractId}`;
+                if (mode === 'delivery') return `/contracts/input-delivery/${contractId}`;
+                if (mode === 'crv') return `/contracts/input-crv/${contractId}`;
+                if (mode === 'payment') return `/contracts/input-payment/${contractId}`;
+                return '#';
+            }
+
+            function renderTable(contracts) {
+                if (!contracts || contracts.length === 0) {
+                    if (tableContainer) tableContainer.style.display = 'none';
+                    if (noMsgDiv) noMsgDiv.style.display = 'block';
+                    return;
+                }
+
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (noMsgDiv) noMsgDiv.style.display = 'none';
+
+                tableBody.innerHTML = contracts.map(c => `
+                <tr>
+                    <td>${c.contract_no || ''}</td>
+                    <td>${c.contract_date || ''}</td>
+                    <td>${c.contract_type || ''}</td>
+                    <td>${c.total_value || ''}</td>
+                    <td>${c.contract_status || ''}</td>
+                    <td>
+                        <a href="${getActionUrl(c.contract_id)}" class="btn btn-primary">Select</a>
+                    </td>
+                </tr>
+            `).join('');
+            }
+
+            searchInput.addEventListener('input', function () {
+                const q = this.value.trim();
+                clearTimeout(searchTimeout);
+
+                searchTimeout = setTimeout(function () {
+                    fetch('{{ url_for("contracts_tanks.api_search_contracts") }}?q=' + encodeURIComponent(q))
+                        .then(r => r.json())
+                        .then(data => {
+                            renderTable(data.contracts);
+                        })
+                        .catch(err => console.error('Search failed', err));
+                }, 300);
+            });
+        })();
+    </script>
+
+
+</div>
+{% endblock %}

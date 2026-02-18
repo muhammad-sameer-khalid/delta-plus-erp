@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Issue Items - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container-narrow">
+    <h1>Issue Items</h1>
+    <p>Issue items against demand notes or projects</p>
+
+    <form method="POST" action="{{ url_for('store.issue_items') }}" class="mt-4">
+        <div class="form-group">
+            <label for="issue_number" class="form-label required">Issue Number</label>
+            <input type="text" id="issue_number" name="issue_number" class="form-input" required
+                placeholder="e.g., ISS-001">
+        </div>
+
+        <div class="form-group">
+            <label for="pcb_assembly_name" class="form-label required">PCB/Assembly Name</label>
+            <input type="text" id="pcb_assembly_name" name="pcb_assembly_name" class="form-input" required
+                placeholder="e.g., Electronic Amplifier T69">
+        </div>
+
+        <div class="form-group">
+            <label for="issued_to" class="form-label required">Issued To</label>
+            <input type="text" id="issued_to" name="issued_to" class="form-input" required placeholder="Name of person">
+        </div>
+
+        <div class="form-group">
+            <label for="contract_project" class="form-label required">Contract/Project Name</label>
+            <input type="text" id="contract_project" name="contract_project" class="form-input" required
+                placeholder="Project name or contract number">
+        </div>
+
+        <p class="mt-3" style="color: #666;">Next you will choose to add items from a BOM or by searching the store.</p>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Continue →</button>
+            <a href="{{ url_for('store.store_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

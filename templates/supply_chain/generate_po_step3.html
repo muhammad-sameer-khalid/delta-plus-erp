@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Purchase Order - Step 3 - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Purchase Order: {{ po_number }}</h1>
+    <p>Step 3 of 7: Select Components & Enter Prices - Demand #{{ demand_no }}</p>
+
+    <div class="form-container mt-4">
+        <form method="POST" action="{{ url_for('supply_chain.generate_po_save_components') }}">
+            <input type="hidden" name="demand_no" value="{{ demand_no }}">
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">
+                                <input type="checkbox" id="selectAll" onchange="toggleAll(this)" checked>
+                            </th>
+                            <th>Part Type</th>
+                            <th>Part Value</th>
+                            <th>Part Description</th>
+                            <th>Footprint</th>
+                            <th>Qty</th>
+                            <th>Project</th>
+                            <th>Price in ¥</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comp in components %}
+                        <tr id="row_{{ loop.index0 }}">
+                            <td>
+                                <input type="checkbox" name="selected" value="{{ loop.index0 }}" 
+                                       onchange="togglePriceField({{ loop.index0 }})" checked 
+                                       class="component-checkbox">
+                            </td>
+                            <td>{{ comp.part_type }}</td>
+                            <td>{{ comp.part_value }}</td>
+                            <td>{{ comp.part_description }}</td>
+                            <td>{{ comp.footprint }}</td>
+                            <td><strong>{{ comp.qty }}</strong></td>
+                            <td>{{ comp.project }}</td>
+                            <td>
+                                <input type="number" name="unit_price_{{ loop.index0 }}" 
+                                       id="price_{{ loop.index0 }}"
+                                       class="form-input price-input" 
+                                       step="0.01" min="0" placeholder="0.00" 
+                                       style="width: 120px;">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="form-actions mt-4">
+                <a href="{{ url_for('supply_chain.generate_po_select_demand') }}" class="btn btn-secondary">← Back</a>
+                <button type="submit" class="btn btn-primary">Add to PO →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.component-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        const index = cb.value;
+        togglePriceField(index);
+    });
+}
+
+function togglePriceField(index) {
+    const checkbox = document.querySelector(`input[name="selected"][value="${index}"]`);
+    const priceField = document.getElementById(`price_${index}`);
+    const row = document.getElementById(`row_${index}`);
+    
+    if (checkbox.checked) {
+        priceField.disabled = false;
+        priceField.style.background = 'white';
+        priceField.required = true;
+        row.style.opacity = '1';
+    } else {
+        priceField.disabled = true;
+        priceField.style.background = '#e0e0e0';
+        priceField.required = false;
+        priceField.value = '';
+        row.style.opacity = '0.5';
+    }
+}
+
+// Initialize all price fields as enabled
+window.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.component-checkbox');
+    checkboxes.forEach(cb => {
+        togglePriceField(cb.value);
+    });
+});
+</script>
+
+<style>
+    .form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        margin: 1rem 0;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .data-table {
+        min-width: 900px; /* Ensures table doesn't compress too much */
+    }
+
+    .data-table td,
+    .data-table th {
+        white-space: nowrap;
+    }
+
+    .data-table td:nth-child(4) {
+        /* Part Description can wrap */
+        white-space: normal;
+        max-width: 200px;
+        word-wrap: break-word;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .price-input {
+        padding: 0.5rem;
+        text-align: right;
+    }
+
+    .data-table td {
+        vertical-align: middle;
+    }
+
+    .data-table input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Purchase Order - Review - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Purchase Order: {{ po_draft.po_number }}</h1>
+    <p>Step 4 of 7: Review Components</p>
+
+    <div class="mt-4">
+        <h3>Components Added to PO</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">Components from {{ demand_groups|length }} demand note(s)</p>
+        
+        <!-- Show components grouped by demand note -->
+        {% for demand_no, components in demand_groups.items() %}
+        <div class="demand-group" style="margin-bottom: 2rem; border: 2px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+            <div class="demand-group-header" style="background: #f8f9fa; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color);">
+                <div>
+                    <h4 style="margin: 0; color: var(--primary-color);">Demand Note #{{ demand_no }}</h4>
+                    <p style="margin: 0.25rem 0 0 0; color: #666; font-size: 0.9rem;">{{ components|length }} component(s)</p>
+                </div>
+                <form method="POST" action="{{ url_for('supply_chain.generate_po_remove_demand', demand_no=demand_no) }}" 
+                      onsubmit="return confirm('Remove all components from Demand #{{ demand_no }}?')" style="margin: 0;">
+                    <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem;">
+                        🗑️ Remove Demand
+                    </button>
+                </form>
+            </div>
+            <div style="padding: 1rem;">
+                <table class="data-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Part Type</th>
+                            <th>Part Value</th>
+                            <th>Part Description</th>
+                            <th>Qty</th>
+                            <th>Unit Price (¥)</th>
+                            <th>Total (¥)</th>
+                            <th>Project</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comp in components %}
+                        <tr>
+                            <td>{{ comp.part_type }}</td>
+                            <td>{{ comp.part_value }}</td>
+                            <td>{{ comp.part_description }}</td>
+                            <td>{{ comp.qty }}</td>
+                            <td style="text-align: right;">{{ "%.2f"|format(comp.unit_price) }}</td>
+                            <td style="text-align: right;">{{ "%.2f"|format(comp.total_price) }}</td>
+                            <td>{{ comp.project }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="background: #f0f0f0; font-weight: bold;">
+                            <td colspan="5" style="text-align: right;">Subtotal for Demand #{{ demand_no }}:</td>
+                            <td style="text-align: right;">¥ {{ "%.2f"|format(components|sum(attribute='total_price')) }}</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Deduplicated Summary -->
+        <div class="mt-4" style="background: #fffbea; border: 2px solid #ffd700; border-radius: 8px; padding: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #856404;">📊 Deduplicated Summary (Final PO)</h4>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">After merging duplicate components (same part value, description, footprint):</p>
+            
+            <div class="table-container">
+                <table class="data-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th>Part Type</th>
+                            <th>Part Value</th>
+                            <th>Part Description</th>
+                            <th>Footprint</th>
+                            <th>Qty</th>
+                            <th>Unit Price (¥)</th>
+                            <th>Total Price (¥)</th>
+                            <th>Project</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comp in deduplicated_components %}
+                        <tr>
+                            <td>{{ comp.part_type }}</td>
+                            <td>{{ comp.part_value }}</td>
+                            <td>{{ comp.part_description }}</td>
+                            <td>{{ comp.footprint }}</td>
+                            <td><strong>{{ comp.qty }}</strong></td>
+                            <td style="text-align: right;">{{ "%.2f"|format(comp.unit_price) }}</td>
+                            <td style="text-align: right;"><strong>{{ "%.2f"|format(comp.total_price) }}</strong></td>
+                            <td>{{ comp.project }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="border-top: 3px solid var(--primary-color); background: #f0f0f0;">
+                            <td colspan="6" style="text-align: right;"><strong>Grand Total:</strong></td>
+                            <td style="text-align: right;"><strong>¥ {{ "%.2f"|format(deduplicated_components|sum(attribute='total_price')) }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-4" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+            <h4 style="margin-bottom: 1rem;">What would you like to do?</h4>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <form method="POST" action="{{ url_for('supply_chain.generate_po_add_components') }}" 
+                      style="border: 2px solid var(--primary-color); padding: 1.5rem; border-radius: 8px; background: white;">
+                    <h5>Add More Components</h5>
+                    <p style="color: #666; font-size: 0.95rem; margin: 1rem 0;">Select another demand note to add more components to this PO</p>
+                    
+                    <div class="form-group">
+                        <label for="demand_no" class="form-label">Select Demand Note</label>
+                        <select name="demand_no" id="demand_no" class="form-input" required>
+                            <option value="">-- Select Demand --</option>
+                            {% for num in demand_numbers %}
+                            <option value="{{ num }}">Demand #{{ num }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">Add More Components</button>
+                </form>
+
+                <div style="border: 2px solid var(--primary-color); padding: 1.5rem; border-radius: 8px; background: white;">
+                    <h5>Proceed to Finalize PO</h5>
+                    <p style="color: #666; font-size: 0.95rem; margin: 1rem 0;">Ready with all components? Enter supplier information and generate the PO</p>
+                    
+                    <a href="{{ url_for('supply_chain.generate_po_supplier_form') }}" 
+                       class="btn btn-primary" style="width: 100%; display: block; text-align: center; margin-top: 2.5rem;">
+                        Enter Supplier Info →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{{ url_for('supply_chain.supply_chain_dashboard') }}" class="btn btn-secondary">Cancel & Discard</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    h5 {
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .data-table {
+        min-width: 900px;
+    }
+
+    .data-table td,
+    .data-table th {
+        white-space: nowrap;
+    }
+
+    .data-table td:nth-child(3) {
+        /* Part Description can wrap */
+        white-space: normal;
+        max-width: 200px;
+        word-wrap: break-word;
+    }
+</style>
+{% endblock %}

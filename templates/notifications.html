@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <h1>Notifications</h1>
+            <p>View all system notifications</p>
+        </div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to main menu</a>
+    </div>
+
+    <!-- Line tabs: All | Tanks | Biomedical | Battery -->
+    <div class="notifications-line-tabs"
+        style="display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #e0e0e0;">
+        <button type="button" class="notification-line-tab active" data-line="all" id="tab-line-all">All</button>
+        <button type="button" class="notification-line-tab" data-line="tanks" id="tab-line-tanks">Tanks</button>
+        <button type="button" class="notification-line-tab" data-line="biomedical"
+            id="tab-line-biomedical">Biomedical</button>
+        <button type="button" class="notification-line-tab" data-line="battery" id="tab-line-battery">Battery</button>
+    </div>
+
+    <div class="mt-4" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <button onclick="filterByType('all')" class="btn btn-secondary" id="filter-all">All types</button>
+        <button onclick="filterByType('demand_approval')" class="btn btn-secondary" id="filter-demand">Demand
+            Approvals</button>
+        <button onclick="filterByType('qc_product')" class="btn btn-secondary" id="filter-qc">QC Notifications</button>
+        <button onclick="filterByType('contract')" class="btn btn-secondary" id="filter-contract">Contracts
+            (All)</button>
+        <button onclick="filterByType('contract_bill_pending')" class="btn btn-secondary" id="filter-bill-pending">Bill
+            Pending</button>
+        <button onclick="filterByType('contract_bg_expiry')" class="btn btn-secondary" id="filter-bg-expiry">BG
+            Expiry</button>
+        <button onclick="markAllRead()" class="btn btn-primary">Mark All as Read</button>
+    </div>
+
+    {% if notifications %}
+    <div class="list-container">
+        {% for notification in notifications %}
+        <div class="list-item notification-item {% if not notification.is_read %}unread{% endif %}"
+            data-type="{{ notification.notification_type }}" data-line="{{ notification.line }}"
+            style="border-left: 4px solid {% if not notification.is_read %}#9ACF59{% else %}#e0e0e0{% endif %};">
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    {% if notification.notification_type == 'demand_approval' %}
+                    <span style="font-size: 1.5rem;">📋</span>
+                    {% elif notification.notification_type == 'qc_product' %}
+                    <span style="font-size: 1.5rem;">🔍</span>
+                    {% elif notification.notification_type == 'qc_component' %}
+                    <span style="font-size: 1.5rem;">🔩</span>
+                    {% elif notification.notification_type == 'contract_bg_expiry' %}
+                    <span style="font-size: 1.5rem;">📄</span>
+                    {% elif notification.notification_type in ['contract_delivery_pending', 'contract_crv_pending',
+                    'contract_payment_pending', 'contract_bill_pending'] %}
+                    <span style="font-size: 1.5rem;">📋</span>
+                    {% else %}
+                    <span style="font-size: 1.5rem;">📢</span>
+                    {% endif %}
+
+                    <div>
+                        <p style="margin: 0; font-weight: 500; color: #1a1a1a;">{{ notification.message }}</p>
+                        <small style="color: #666;">
+                            {{ notification.created_at.strftime('%Y-%m-%d %H:%M') if notification.created_at else '' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                {% if not notification.is_read %}
+                <button onclick="markAsRead({{ notification.id }})" class="btn btn-success"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    ✓ Mark Read
+                </button>
+                {% else %}
+                <span style="color: #27ae60; font-size: 0.9rem;">✓ Read</span>
+                {% endif %}
+
+                <button onclick="deleteNotification({{ notification.id }})" class="btn btn-danger"
+                    style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    🗑️
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666; font-size: 1.1rem;">No notifications</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    let currentLine = 'all';
+    let currentType = 'all';
+
+    function filterByLine(line) {
+        currentLine = line;
+        const tabs = document.querySelectorAll('.notification-line-tab');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.line === line);
+        });
+        applyFilters();
+    }
+
+    function filterByType(type) {
+        currentType = type;
+        const buttons = document.querySelectorAll('[id^="filter-"]');
+        buttons.forEach(btn => {
+            const isAll = btn.id === 'filter-all';
+            const isDemand = type === 'demand_approval' && btn.id === 'filter-demand';
+            const isQc = type === 'qc_product' && btn.id === 'filter-qc';
+            const isContract = type === 'contract' && btn.id === 'filter-contract';
+            const isBillPending = type === 'contract_bill_pending' && btn.id === 'filter-bill-pending';
+            const isBgExpiry = type === 'contract_bg_expiry' && btn.id === 'filter-bg-expiry';
+
+            const isActive = isAll || isDemand || isQc || isContract || isBillPending || isBgExpiry;
+            btn.classList.toggle('btn-primary', isActive);
+            btn.classList.toggle('btn-secondary', !isActive);
+        });
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const items = document.querySelectorAll('.notification-item');
+        items.forEach(item => {
+            const line = item.dataset.line || 'tanks';
+            const t = item.dataset.type || '';
+            const lineOk = currentLine === 'all' || line === currentLine;
+            const typeOk = currentType === 'all' || (currentType === 'contract' ? t.startsWith('contract_') : t === currentType);
+            item.style.display = (lineOk && typeOk) ? 'flex' : 'none';
+        });
+    }
+
+    function filterNotifications(type) {
+        filterByType(type);
+    }
+
+    function markAsRead(notificationId) {
+        fetch(`/notifications/mark-read/${notificationId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+
+    function markAllRead() {
+        fetch('/notifications/mark-all-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+
+    function deleteNotification(notificationId) {
+        if (confirm('Delete this notification?')) {
+            fetch(`/notifications/delete/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    }
+                });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.notification-line-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                filterByLine(this.dataset.line);
+            });
+        });
+        filterByType('all');
+    });
+</script>
+
+<style>
+    .notification-line-tab {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: #f0f0f0;
+        color: #555;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-bottom: -2px;
+        border-bottom: 2px solid transparent;
+    }
+
+    .notification-line-tab:hover {
+        background: #e5e5e5;
+        color: #333;
+    }
+
+    .notification-line-tab.active {
+        background: white;
+        color: var(--primary-color, #9ACF59);
+        font-weight: 600;
+        border-bottom-color: var(--primary-color, #9ACF59);
+    }
+
+    .notification-item.unread {
+        background-color: #f0f7e6;
+    }
+
+    .notification-item {
+        cursor: default;
+    }
+</style>
+{% endblock %}

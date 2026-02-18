@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}All Contracts - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>All Contracts</h1>
+        <a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Contracts
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4 no-hover">
+        <div class="card-body">
+            <div class="form-group mb-0 position-relative">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input type="text" id="contractSearch" class="form-input"
+                        placeholder="Start typing contract number..." autocomplete="off">
+                </div>
+                <small class="form-text text-muted mt-2">Search across Tanks, Biomedical, and Battery
+                    departments.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm no-hover">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Search Results</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="contractsTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Line</th>
+                        <th>Department</th>
+                        <th>Contract No.</th>
+                        <th>Date</th>
+                        <th>Total Value</th>
+                        <th>Delivery Deadline</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="contractsBody">
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">Type in the search box to find contracts...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('contractSearch');
+        const tableBody = document.getElementById('contractsBody');
+        let debounceTimer;
+
+        function fetchContracts(query) {
+            fetch(`{{ url_for('contracts_main.api_search_all') }}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = '';
+
+                    if (!data.contracts || data.contracts.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No contracts found</td></tr>';
+                        return;
+                    }
+
+                    data.contracts.forEach(c => {
+                        // Determine link based on line
+                        let viewUrl = '#';
+                        if (c.line === 'Tanks') {
+                            viewUrl = `{{ url_for('contracts_tanks.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        } else if (c.line === 'Biomedical') {
+                            viewUrl = `{{ url_for('contracts_biomedical.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        } else if (c.line === 'Battery') {
+                            viewUrl = `{{ url_for('contracts_battery.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        }
+
+                        const row = `
+                        <tr>
+                            <td><span class="badge badge-${getBadgeColor(c.line)}">${c.line}</span></td>
+                            <td>${c.department || '-'}</td>
+                            <td class="font-weight-bold">${c.contract_no}</td>
+                            <td>${c.contract_date || '-'}</td>
+                            <td>${formatCurrency(c.total_value)}</td>
+                            <td>${c.delivery_deadline || '-'}</td>
+                            <td>
+                                <a href="${viewUrl}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching contracts:', err);
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
+                });
+        }
+
+        function getBadgeColor(line) {
+            if (line === 'Tanks') return 'primary';
+            if (line === 'Biomedical') return 'success';
+            if (line === 'Battery') return 'warning';
+            return 'secondary';
+        }
+
+        function formatCurrency(val) {
+            if (!val) return '0.00';
+            return parseFloat(val).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Initial load (show recent or empty)
+        fetchContracts('');
+
+        searchInput.addEventListener('input', function (e) {
+            const val = e.target.value.trim();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchContracts(val);
+            }, 300);
+        });
+    });
+</script>
+{% endblock %}

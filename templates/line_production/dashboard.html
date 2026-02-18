@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Production ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Production Department ({{ line|capitalize }})</h1>
+    <p>Production Management and Demand Notes</p>
+    <div class="mt-4">
+    </div>
+    <div class="mt-4">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.generate_demand') }}'">
+            <h4>Generate a Demand Note</h4>
+            <p>Create a new demand note for Supply Chain</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_demand') }}'">
+            <h4>Display Demand Notes</h4>
+            <p>View all demand notes</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.send_to_qc') }}'">
+            <h4>Send Product to Quality Control</h4>
+            <p>Submit products for quality inspection</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Select item – {{ mode|title }} - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – Enter {{ mode|title }} for specific items</h1>
+    <p class="mb-4">Search and select an item to enter {{ mode }} info.</p>
+
+    <div class="form-group" style="max-width: 400px;">
+        <label class="form-label">Search by item name or part number</label>
+        <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="searchItemInput" class="form-input" placeholder="Type to search..."
+                value="{{ search_q or '' }}" autocomplete="off">
+        </div>
+    </div>
+
+    <div id="itemsTableContainer" class="table-container mt-4" style="display: {{ 'block' if items else 'none' }};">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item name</th>
+                    <th>Part number</th>
+                    <th>Qty</th>
+                    <th>Unit price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+                {% for i in items %}
+                <tr>
+                    <td>{{ i.item_name or '-' }}</td>
+                    <td>{{ i.part_number or '-' }}</td>
+                    <td>{{ i.qty }}</td>
+                    <td>{{ i.unit_price }}</td>
+                    <td>
+                        {% if mode == 'inspection' %}
+                        <a href="{{ url_for('contracts_tanks.input_inspection_item', contract_id=contract.contract_id, item_id=i.item_id) }}"
+                            class="btn btn-primary">Enter {{ mode }}</a>
+                        {% elif mode == 'delivery' %}
+                        <a href="{{ url_for('contracts_tanks.input_delivery_item', contract_id=contract.contract_id, item_id=i.item_id) }}"
+                            class="btn btn-primary">Enter {{ mode }}</a>
+                        {% elif mode == 'crv' %}
+                        <a href="{{ url_for('contracts_tanks.input_crv_item', contract_id=contract.contract_id, item_id=i.item_id) }}"
+                            class="btn btn-primary">Enter {{ mode }}</a>
+                        {% elif mode == 'payment' %}
+                        <a href="{{ url_for('contracts_tanks.input_payment_item', contract_id=contract.contract_id, item_id=i.item_id) }}"
+                            class="btn btn-primary">Enter {{ mode }}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="noItemsMsg" class="mt-4" style="color: #666; display: {{ 'none' if items else 'block' }};">
+        <p>No items found.</p>
+    </div>
+
+    <script>
+        (function () {
+            const searchInput = document.getElementById('searchItemInput');
+            const tableContainer = document.getElementById('itemsTableContainer');
+            const tableBody = document.getElementById('itemsTableBody');
+            const noMsgDiv = document.getElementById('noItemsMsg');
+            const mode = "{{ mode }}";
+            const contractId = {{ contract.contract_id | tojson
+        }};
+        let searchTimeout = null;
+
+        function getActionUrl(itemId) {
+            if (mode === 'inspection') return `/contracts/input-inspection/${contractId}/item/${itemId}`;
+            if (mode === 'delivery') return `/contracts/input-delivery/${contractId}/item/${itemId}`;
+            if (mode === 'crv') return `/contracts/input-crv/${contractId}/item/${itemId}`;
+            if (mode === 'payment') return `/contracts/input-payment/${contractId}/item/${itemId}`;
+            return '#';
+        }
+
+        function renderTable(items) {
+            if (!items || items.length === 0) {
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (noMsgDiv) noMsgDiv.style.display = 'block';
+                return;
+            }
+
+            if (tableContainer) tableContainer.style.display = 'block';
+            if (noMsgDiv) noMsgDiv.style.display = 'none';
+
+            tableBody.innerHTML = items.map(i => `
+                    <tr>
+                        <td>${i.item_name || '-'}</td>
+                        <td>${i.part_number || '-'}</td>
+                        <td>${i.qty}</td>
+                        <td>${i.unit_price}</td>
+                        <td>
+                            <a href="${getActionUrl(i.item_id)}" class="btn btn-primary">Enter ${mode}</a>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        searchInput.addEventListener('input', function () {
+            const q = this.value.trim();
+            clearTimeout(searchTimeout);
+
+            searchTimeout = setTimeout(function () {
+                fetch(`/tanks/contracts/api/search-contract-items/${contractId}?q=` + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        renderTable(data.items);
+                    })
+                    .catch(err => console.error('Search failed', err));
+            }, 300);
+        });
+        }) ();
+    </script>
+
+    <div class="mt-4">
+        {% if mode == 'inspection' %}
+        <a href="{{ url_for('contracts_tanks.input_inspection_choose', contract_id=contract.contract_id) }}"
+            class="btn btn-secondary">← Back</a>
+        {% elif mode == 'delivery' %}
+        <a href="{{ url_for('contracts_tanks.input_delivery_choose', contract_id=contract.contract_id) }}"
+            class="btn btn-secondary">← Back</a>
+        {% elif mode == 'crv' %}
+        <a href="{{ url_for('contracts_tanks.input_crv_choose', contract_id=contract.contract_id) }}"
+            class="btn btn-secondary">← Back</a>
+        {% elif mode == 'payment' %}
+        <a href="{{ url_for('contracts_tanks.input_payment_choose', contract_id=contract.contract_id) }}"
+            class="btn btn-secondary">← Back</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

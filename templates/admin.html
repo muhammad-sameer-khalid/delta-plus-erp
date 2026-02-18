@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Admin Panel - Role Management</h1>
+    <p>Manage user accounts and role assignments</p>
+
+    <!-- Current User Roles Table -->
+    <div class="mt-4">
+        <h3>Current User Roles</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Roles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if user_roles %}
+                    {% for user in user_roles %}
+                    <tr>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.roles }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="2" class="text-center">No users found</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Remove Role Form -->
+    <div class="mt-4">
+        <h3>Add or Remove Role</h3>
+        <p style="font-size: 0.9rem; color: #666;">
+            If the role already exists for the account, it will be removed. Otherwise, it will be added.
+        </p>
+
+        <form method="POST" action="{{ url_for('admin') }}" class="mt-3">
+            <div class="form-group">
+                <label for="email" class="form-label required">Account Email</label>
+                <input type="email" id="email" name="email" class="form-input" required placeholder="user@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="role" class="form-label required">Role</label>
+                <select id="role" name="role" class="form-select" required>
+                    <option value="">Select a role...</option>
+                    {% for role in valid_roles %}
+                    <option value="{{ role }}">{{ role.title() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="password-field">
+                <label for="password" class="form-label">Password (for new users)</label>
+                <input type="password" id="password" name="password" class="form-input"
+                    placeholder="Leave empty to use default: password123">
+                <small style="color: #666;">
+                    Only required when creating a new user account. If left empty, default password "password123" will
+                    be used.
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show password field hint
+    document.getElementById('email').addEventListener('input', function () {
+        const passwordField = document.getElementById('password-field');
+        if (this.value.trim()) {
+            passwordField.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

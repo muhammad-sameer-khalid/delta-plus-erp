@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Add Items (Separate) ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Add Items to Issue (Separate)</h1>
+    {% if pending_issue %}<p class="mb-4">Issue: <strong>{{ pending_issue.issue_number }}</strong></p>{% endif %}
+    <div class="form-group">
+        <label class="form-label">Search item (part type, part value, or part description)</label>
+        <input type="text" id="searchStore" class="form-input" placeholder="Type to search..." autocomplete="off">
+        <div id="searchResults" class="search-results-dropdown" style="display: none; position: absolute; z-index: 100; background: #fff; border: 1px solid #ccc; max-height: 280px; overflow-y: auto; width: 100%; max-width: 600px;"></div>
+    </div>
+    <div id="qtySection" style="display: none; margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <p id="selectedItemLabel" class="mb-2"></p>
+        <label class="form-label">Quantity to issue</label>
+        <input type="number" id="qtyInput" min="1" class="form-input" style="max-width: 120px;">
+        <button type="button" class="btn btn-primary ml-2" id="btnAddThisItem">Add to issue</button>
+    </div>
+    <h3 class="mt-4">Items in this issue</h3>
+    <div id="itemsList" class="table-container mt-2">
+        <table><thead><tr><th>Part Type</th><th>Part Value</th><th>Part Description</th><th>Footprint</th><th>Qty</th></tr></thead>
+            <tbody id="itemsTableBody"></tbody>
+        </table>
+        <p id="noItemsMsg" style="display: none; color: #666;">No items added yet. Search and add above.</p>
+    </div>
+    <div class="mt-4 btn-group">
+        <form method="POST" action="{{ url_for(bp ~ '.issue_submit') }}" id="formIssue" style="display: inline;">
+            <button type="submit" class="btn btn-primary" id="btnIssue" disabled>Issue</button>
+        </form>
+        <a href="{{ url_for(bp ~ '.issue_select_method') }}" class="btn btn-secondary">← Back to method</a>
+    </div>
+</div>
+<script>
+(function() {
+    var apiPending = "{{ url_for(bp ~ '.api_pending_items') }}";
+    var apiSearch = "{{ url_for(bp ~ '.api_search_store_items') }}";
+    var apiAvailable = "{{ url_for(bp ~ '.api_available_for_store_item') }}";
+    var apiAddItem = "{{ url_for(bp ~ '.issue_add_item') }}";
+    var searchInput = document.getElementById('searchStore');
+    var searchResults = document.getElementById('searchResults');
+    var qtySection = document.getElementById('qtySection');
+    var selectedItemLabel = document.getElementById('selectedItemLabel');
+    var qtyInput = document.getElementById('qtyInput');
+    var btnAddThisItem = document.getElementById('btnAddThisItem');
+    var itemsTableBody = document.getElementById('itemsTableBody');
+    var noItemsMsg = document.getElementById('noItemsMsg');
+    var btnIssue = document.getElementById('btnIssue');
+    var selectedItem = null;
+    var searchTimeout = null;
+    function renderTable(items) {
+        if (!items) {
+            fetch(apiPending).then(r => r.json()).then(data => { renderTable(data.items || []); }).catch(() => renderTable([]));
+            return;
+        }
+        if (items.length === 0) { itemsTableBody.innerHTML = ''; noItemsMsg.style.display = 'block'; btnIssue.disabled = true; }
+        else {
+            noItemsMsg.style.display = 'none'; btnIssue.disabled = false;
+            itemsTableBody.innerHTML = items.map(it => '<tr><td>' + (it.part_type || '') + '</td><td>' + (it.part_value || '') + '</td><td>' + (it.part_description || '') + '</td><td>' + (it.footprint || '') + '</td><td>' + it.qty + '</td></tr>').join('');
+        }
+    }
+    searchInput.addEventListener('input', function() {
+        var q = this.value.trim();
+        clearTimeout(searchTimeout);
+        searchResults.style.display = 'none';
+        if (q.length < 1) return;
+        searchTimeout = setTimeout(function() {
+            fetch(apiSearch + '?q=' + encodeURIComponent(q)).then(r => r.json()).then(data => {
+                var items = data.items || [];
+                if (items.length === 0) searchResults.innerHTML = '<div class="p-2">No items found</div>';
+                else searchResults.innerHTML = items.map(function(it) {
+                    return '<div class="search-result-item p-2" data-id="' + it.id + '" data-cat="' + (it.store_category || '') + '" data-pt="' + (it.part_type || '') + '" data-pv="' + (it.part_value || '') + '" data-pd="' + (it.part_description || '') + '" data-fp="' + (it.footprint || '') + '" data-qty="' + (it.qty != null ? it.qty : 0) + '" style="cursor: pointer; border-bottom: 1px solid #eee;">' +
+                        '<div><strong>Type:</strong> ' + (it.part_type || '') + ' &nbsp; <strong>Value:</strong> ' + (it.part_value || '') + '</div><div><strong>Description:</strong> ' + (it.part_description || '') + '</div><div><strong>Footprint:</strong> ' + (it.footprint || '') + ' &nbsp; <strong>Qty:</strong> ' + (it.qty || 0) + '</div></div>';
+                }).join('');
+                searchResults.style.display = 'block';
+            });
+        }, 200);
+    });
+    searchResults.addEventListener('click', function(e) {
+        var el = e.target.closest('.search-result-item');
+        if (!el) return;
+        var storeId = el.dataset.id, storeCat = el.dataset.cat;
+        selectedItem = { store_id: storeId, store_category: storeCat, part_type: el.dataset.pt, part_value: el.dataset.pv, part_description: el.dataset.pd, footprint: el.dataset.fp, max_qty: parseInt(el.dataset.qty, 10) || 0 };
+        qtySection.style.display = 'block';
+        searchResults.style.display = 'none';
+        searchInput.value = '';
+        selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' — loading...';
+        qtyInput.value = '1';
+        fetch(apiAvailable + '?store_category=' + encodeURIComponent(storeCat) + '&store_id=' + encodeURIComponent(storeId))
+            .then(r => r.json()).then(data => {
+                if (data.error) { selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' (error)'; selectedItem.max_qty = 0; qtyInput.max = 0; btnAddThisItem.disabled = true; return; }
+                selectedItem.max_qty = data.available || 0;
+                qtyInput.max = selectedItem.max_qty;
+                qtyInput.value = selectedItem.max_qty > 0 ? Math.min(1, selectedItem.max_qty) : 0;
+                btnAddThisItem.disabled = selectedItem.max_qty <= 0;
+                selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + (selectedItem.max_qty <= 0 ? ' — Nothing to add' : ' (max ' + selectedItem.max_qty + ')');
+            }).catch(function() { selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value; qtyInput.max = selectedItem.max_qty; qtyInput.value = Math.min(1, selectedItem.max_qty); btnAddThisItem.disabled = false; });
+    });
+    btnAddThisItem.addEventListener('click', function() {
+        if (!selectedItem) return;
+        var qty = parseInt(qtyInput.value, 10) || 0;
+        if (qty <= 0 || qty > selectedItem.max_qty) { alert('Enter a valid quantity (1 to ' + selectedItem.max_qty + ').'); return; }
+        fetch(apiAddItem, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store_category: selectedItem.store_category, store_id: selectedItem.store_id, qty: qty }) })
+            .then(r => r.json()).then(data => {
+                if (data.error) { alert(data.error); return; }
+                if (data.message) alert(data.message);
+                selectedItem = null; qtySection.style.display = 'none'; searchInput.value = '';
+                renderTable(data.items || []);
+            }).catch(() => alert('Failed to add item'));
+    });
+    renderTable(null);
+})();
+</script>
+{% endblock %}

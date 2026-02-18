@@ -1,0 +1,3 @@
+@echo off
+echo Requesting administrative privileges to add firewall rule...
+powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command & { New-NetFirewallRule -DisplayName ''Delta Plus ERP'' -Direction Inbound -LocalPort 5000 -Protocol TCP -Action Allow; Write-Host ''Firewall rule added successfully.''; Start-Sleep -Seconds 5 }'"

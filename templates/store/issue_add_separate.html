@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Add Items (Separate) - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Add Items to Issue (Separate)</h1>
+    <p class="mb-4">Issue: <strong>{{ session.pending_issue.issue_number }}</strong></p>
+
+    <div class="form-group">
+        <label class="form-label">Search item (part type, part value, or part description)</label>
+        <input type="text" id="searchStore" class="form-input" placeholder="Type to search..." autocomplete="off">
+        <div id="searchResults" class="search-results-dropdown" style="display: none; position: absolute; z-index: 100; background: #fff; border: 1px solid #ccc; max-height: 280px; overflow-y: auto; width: 100%; max-width: 600px;"></div>
+    </div>
+
+    <div id="qtySection" style="display: none; margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <p id="selectedItemLabel" class="mb-2"></p>
+        <label class="form-label">Quantity to issue</label>
+        <input type="number" id="qtyInput" min="1" class="form-input" style="max-width: 120px;">
+        <button type="button" class="btn btn-primary ml-2" id="btnAddThisItem">Add to issue</button>
+    </div>
+
+    <h3 class="mt-4">Items in this issue</h3>
+    <div id="itemsList" class="table-container mt-2">
+        <table>
+            <thead>
+                <tr>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Part Description</th>
+                    <th>Footprint</th>
+                    <th>Qty</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+                <!-- filled by JS -->
+            </tbody>
+        </table>
+        <p id="noItemsMsg" style="display: none; color: #666;">No items added yet. Search and add above.</p>
+    </div>
+
+    <div class="mt-4 btn-group">
+        <form method="POST" action="{{ url_for('store.issue_submit') }}" id="formIssue" style="display: inline;">
+            <button type="submit" class="btn btn-primary" id="btnIssue" disabled>Issue</button>
+        </form>
+        <a href="{{ url_for('store.issue_select_method') }}" class="btn btn-secondary">← Back to method</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('searchStore');
+    const searchResults = document.getElementById('searchResults');
+    const qtySection = document.getElementById('qtySection');
+    const selectedItemLabel = document.getElementById('selectedItemLabel');
+    const qtyInput = document.getElementById('qtyInput');
+    const btnAddThisItem = document.getElementById('btnAddThisItem');
+    const itemsTableBody = document.getElementById('itemsTableBody');
+    const noItemsMsg = document.getElementById('noItemsMsg');
+    const btnIssue = document.getElementById('btnIssue');
+
+    let selectedItem = null;
+    let searchTimeout = null;
+
+    function loadPendingItems() {
+        fetch('{{ url_for("store.issue_add_separate") }}')
+            .then(() => {})
+            .catch(() => {});
+    }
+
+    function renderTable(items) {
+        if (!items) {
+            fetch('{{ url_for("store.api_pending_items") }}')
+                .then(r => r.json())
+                .then(data => { renderTable(data.items || []); })
+                .catch(() => renderTable([]));
+            return;
+        }
+        if (items.length === 0) {
+            itemsTableBody.innerHTML = '';
+            noItemsMsg.style.display = 'block';
+            btnIssue.disabled = true;
+        } else {
+            noItemsMsg.style.display = 'none';
+            btnIssue.disabled = false;
+            itemsTableBody.innerHTML = items.map(it =>
+                '<tr><td>' + (it.part_type || '') + '</td><td>' + (it.part_value || '') + '</td><td>' + (it.part_description || '') + '</td><td>' + (it.footprint || '') + '</td><td>' + it.qty + '</td></tr>'
+            ).join('');
+        }
+    }
+
+    searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
+        clearTimeout(searchTimeout);
+        searchResults.style.display = 'none';
+        if (q.length < 1) return;
+        searchTimeout = setTimeout(function() {
+            fetch('{{ url_for("store.api_search_store_items") }}?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    const items = data.items || [];
+                    if (items.length === 0) {
+                        searchResults.innerHTML = '<div class="p-2">No items found</div>';
+                    } else {
+                        searchResults.innerHTML = items.map(it => {
+                            const pt = (it.part_type || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const pv = (it.part_value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const pd = (it.part_description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const fp = (it.footprint || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const qty = it.qty != null ? it.qty : 0;
+                            return '<div class="search-result-item p-2" data-id="' + it.id + '" data-cat="' + (it.store_category || '') + '" data-pt="' + (it.part_type || '') + '" data-pv="' + (it.part_value || '') + '" data-pd="' + (it.part_description || '') + '" data-fp="' + (it.footprint || '') + '" data-qty="' + qty + '" style="cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem;">' +
+                                '<div><strong>Type:</strong> ' + pt + ' &nbsp; <strong>Value:</strong> ' + pv + '</div>' +
+                                '<div><strong>Description:</strong> ' + pd + '</div>' +
+                                '<div><strong>Footprint:</strong> ' + fp + ' &nbsp; <strong>Qty available:</strong> ' + qty + '</div>' +
+                                '</div>';
+                        }).join('');
+                    }
+                    searchResults.style.display = 'block';
+                });
+        }, 200);
+    });
+
+    searchResults.addEventListener('click', function(e) {
+        const el = e.target.closest('.search-result-item');
+        if (!el) return;
+        const storeId = el.dataset.id;
+        const storeCat = el.dataset.cat;
+        selectedItem = {
+            store_id: storeId,
+            store_category: storeCat,
+            part_type: el.dataset.pt,
+            part_value: el.dataset.pv,
+            part_description: el.dataset.pd,
+            footprint: el.dataset.fp,
+            max_qty: parseInt(el.dataset.qty, 10) || 0
+        };
+        qtySection.style.display = 'block';
+        searchResults.style.display = 'none';
+        searchInput.value = '';
+        selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' — loading...';
+        qtyInput.value = '1';
+        fetch('{{ url_for("store.api_available_for_store_item") }}?store_category=' + encodeURIComponent(storeCat) + '&store_id=' + encodeURIComponent(storeId))
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' (error)';
+                    selectedItem.max_qty = 0;
+                    qtyInput.max = 0;
+                    btnAddThisItem.disabled = true;
+                    return;
+                }
+                selectedItem.max_qty = data.available || 0;
+                qtyInput.max = selectedItem.max_qty;
+                qtyInput.value = selectedItem.max_qty > 0 ? Math.min(1, selectedItem.max_qty) : 0;
+                btnAddThisItem.disabled = selectedItem.max_qty <= 0;
+                if (selectedItem.max_qty <= 0) {
+                    selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' — Nothing to add (0 available; ' + (data.already_in_issue || 0) + ' already in issue)';
+                } else if (data.already_in_issue > 0) {
+                    selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' (available to add: ' + selectedItem.max_qty + '; ' + data.already_in_issue + ' already in issue)';
+                } else {
+                    selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' (max ' + selectedItem.max_qty + ')';
+                }
+            })
+            .catch(function() {
+                selectedItemLabel.textContent = selectedItem.part_type + ' | ' + selectedItem.part_value + ' (max ' + selectedItem.max_qty + ')';
+                qtyInput.max = selectedItem.max_qty;
+                qtyInput.value = Math.min(1, selectedItem.max_qty);
+                btnAddThisItem.disabled = false;
+            });
+    });
+
+    btnAddThisItem.addEventListener('click', function() {
+        if (!selectedItem) return;
+        const qty = parseInt(qtyInput.value, 10) || 0;
+        if (qty <= 0 || qty > selectedItem.max_qty) {
+            alert('Enter a valid quantity (1 to ' + selectedItem.max_qty + '). Only ' + selectedItem.max_qty + ' can be added for this item.');
+            return;
+        }
+        fetch('{{ url_for("store.issue_add_item") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({
+                store_category: selectedItem.store_category,
+                store_id: selectedItem.store_id,
+                qty: qty
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            if (data.message) alert(data.message);
+            selectedItem = null;
+            qtySection.style.display = 'none';
+            searchInput.value = '';
+            searchInput.focus();
+            renderTable(data.items || []);
+        })
+        .catch(() => alert('Failed to add item'));
+    });
+
+    renderTable(null);
+})();
+</script>
+{% endblock %}

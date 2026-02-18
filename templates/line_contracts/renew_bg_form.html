@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Renew BG ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Renew BG: Contract {{ contract.contract_no }}</h1>
+    <p class="mb-4">Update Bank Guarantee details.</p>
+
+    <form method="POST" class="mt-4" style="max-width: 520px;">
+        <div class="form-group">
+            <label for="bg_number" class="form-label required">BG Number</label>
+            <input type="text" id="bg_number" name="bg_number" class="form-input" required
+                value="{{ contract.bg_number or '' }}" placeholder="e.g. BG-001, BG-002">
+            <small class="form-text text-muted">For new numbers, append with comma (e.g. "Old, New").</small>
+        </div>
+
+        <div class="form-group">
+            <label for="bg_expiry_date" class="form-label required">BG Expiry Date</label>
+            <input type="date" id="bg_expiry_date" name="bg_expiry_date" class="form-input" required
+                value="{{ contract.bg_expiry_date or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label required">BG Type</label>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                {% set current_types = (contract.bg_type or '').split(', ') %}
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="Bank Margin" {% if 'Bank Margin' in current_types
+                        %}checked{% endif %}> Bank Margin
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="100% Cash Margin" {% if '100% Cash Margin' in
+                        current_types %}checked{% endif %}> 100% Cash Margin
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="bg_type" value="CDR" {% if 'CDR' in current_types %}checked{% endif %}>
+                    CDR
+                </label>
+            </div>
+            <small class="form-text text-muted">Select all that apply.</small>
+        </div>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for(bp ~ '.renew_bg_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

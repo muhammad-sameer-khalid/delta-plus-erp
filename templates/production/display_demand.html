@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Demand Notes - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1>Demand Notes</h1>
+            <p>View and manage all demand notes</p>
+        </div>
+        <a href="{{ url_for('production.production_dashboard') }}" class="btn btn-secondary">← Back to Production
+            Dashboard</a>
+    </div>
+
+    {% if demands %}
+    <!-- Search Box -->
+    <div class="mt-4" style="max-width: 500px;">
+        <input type="text" id="demandSearch" class="form-input"
+            placeholder="🔍 Search demands by number, PCB name, or contract..." data-search-target="demandsTable"
+            data-search-type="table" style="padding: 0.75rem 1rem;">
+    </div>
+
+    <div class="table-container mt-4">
+        <table id="demandsTable">
+            <thead>
+                <tr>
+                    <th>Demand No.</th>
+                    <th>Department</th>
+                    <th>Demand Date</th>
+                    <th>Required Date</th>
+                    <th>Demanded By</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for demand in demands %}
+                <tr onclick="window.location.href='{{ url_for('production.view_demand', demand_no=demand.demand_no) }}'"
+                    style="cursor: pointer;">
+                    <td><strong>#{{ demand.demand_no }}</strong></td>
+                    <td>{{ demand.department }}</td>
+                    <td>{{ demand.demand_date }}</td>
+                    <td>{{ demand.required_date }}</td>
+                    <td>{{ demand.demanded_by }}</td>
+                    <td>
+                        {% if demand.approved %}
+                        <span style="color: #27ae60; font-weight: 600;">✓ Approved</span>
+                        {% else %}
+                        <span style="color: #f39c12; font-weight: 600;">⏳ Pending</span>
+                        {% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        {% if not demand.approved %}
+                        <form method="POST"
+                            action="{{ url_for('production.approve_demand', demand_no=demand.demand_no) }}"
+                            style="display: inline;">
+                            <button type="submit" class="btn btn-success"
+                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+                                Send for Approval
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if can_delete_items(session['user_email'], 'tanks') %}
+                        <form method="POST"
+                            action="{{ url_for('production.delete_demand', demand_no=demand.demand_no) }}"
+                            style="display: inline;"
+                            onsubmit="return confirm('Are you sure you want to delete Demand Note #{{ demand.demand_no }}? This action cannot be undone.');">
+                            <button type="submit" class="btn btn-danger"
+                                style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666; font-size: 1.1rem;">No demand notes found</p>
+        <a href="{{ url_for('production.generate_demand') }}" class="btn btn-primary mt-3">Create First Demand Note</a>
+    </div>
+    {% endif %}
+
+
+</div>
+{% endblock %}

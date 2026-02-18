@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Components for Quality Check - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Components for Quality Check</h1>
+    <p>Select a purchase order to review and approve its components</p>
+
+    <div class="mt-4">
+        <a href="{{ url_for('qc.qc_dashboard') }}" class="btn btn-secondary">← Back to QC Dashboard</a>
+    </div>
+
+    {% if po_list %}
+    <!-- Search Box -->
+    <div class="mt-4 mb-4" style="max-width: 500px;">
+        <input type="text" id="qcSearch" class="form-input" placeholder="🔍 Search POs..." onkeyup="filterQC()"
+            style="padding: 0.75rem 1rem; width: 100%;">
+    </div>
+    <div class="list-container mt-4">
+        {% for po in po_list %}
+        <div class="list-item" onclick="window.location.href='{{ url_for('qc.po_components', po_number=po.po_no) }}'">
+            <div class="list-item-content">
+                <h4>{{ po.po_no }}</h4>
+                <div class="list-item-meta">
+                    <span><strong>{{ po.component_count }}</strong> component(s) pending QC</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666; font-size: 1.1rem;">No purchase orders with components pending quality check</p>
+        <p style="color: #999; margin-top: 0.5rem;">When a PO is generated, it will appear here.</p>
+    </div>
+    {% endif %}
+
+
+</div>
+
+<style>
+    .list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .list-item {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary-color);
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border-radius: 4px;
+    }
+
+    .list-item:hover {
+        background: #f5f5f5;
+        transform: translateX(4px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .list-item-content h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+        font-family: monospace;
+    }
+
+    .list-item-meta {
+        color: #666;
+        font-size: 0.95rem;
+    }
+</style>
+<script>
+    function filterQC() {
+        const input = document.getElementById('qcSearch');
+        const filter = input.value.toLowerCase();
+        const listItems = document.querySelectorAll('.list-item');
+
+        listItems.forEach(item => {
+            const content = item.innerText.toLowerCase();
+            if (content.includes(filter)) {
+                item.style.display = "";
+            } else {
+                item.style.display = "none";
+            }
+        });
+    }
+</script>
+{% endblock %}

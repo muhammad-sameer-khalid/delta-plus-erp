@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}PO {{ po_number }} - Components for QC - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>PO {{ po_number }}</h1>
+    <p>Click a component to enter good quantity and send to Enter Store Items</p>
+
+    <!-- Search Box -->
+    <div class="mt-4 mb-4" style="max-width: 500px;">
+        <input type="text" id="componentSearch" class="form-input" placeholder="🔍 Search components..."
+            onkeyup="filterComponents()" style="padding: 0.75rem 1rem; width: 100%;">
+    </div>
+
+    <div class="table-container mt-4">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Part Description</th>
+                    <th>Footprint</th>
+                    <th>Qty</th>
+                    <th>Project</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for component in components %}
+                <tr class="component-row" data-id="{{ component.id }}" data-qty="{{ component.qty }}">
+                    <td>{{ component.part_type }}</td>
+                    <td>{{ component.part_value }}</td>
+                    <td>{{ component.part_description }}</td>
+                    <td>{{ component.footprint }}</td>
+                    <td><strong>{{ component.qty }}</strong></td>
+                    <td>{{ component.project_number or '-' }}</td>
+                    <td>
+                        <button type="button" onclick="openApproveModal({{ component.id }}, {{ component.qty }})"
+                            class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+                            ✓ Enter good qty & send to store
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('qc.components') }}" class="btn btn-secondary">← Back to PO list</a>
+    </div>
+</div>
+
+<!-- Approval Modal -->
+<div id="approvalModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Enter good quantity</h3>
+            <span class="modal-close" onclick="closeModal('approvalModal')">✕</span>
+        </div>
+
+        <form id="approvalForm" method="POST">
+            <input type="hidden" name="po_number" value="{{ po_number }}">
+            <div class="form-group">
+                <label for="good_qty" class="form-label required">Number of good components</label>
+                <input type="number" id="good_qty" name="good_qty" class="form-input" required min="0">
+                <small style="color: #666;">Quantity that passed quality check (max: <span
+                        id="maxQtyLabel">0</span>)</small>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-success">Save & send to Enter Store Items</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('approvalModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterComponents() {
+        const input = document.getElementById('componentSearch');
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll('.component-row');
+
+        rows.forEach(row => {
+            const content = row.innerText.toLowerCase();
+            if (content.includes(filter)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+
+    function openApproveModal(componentId, maxQty) {
+        const modal = document.getElementById('approvalModal');
+        const form = document.getElementById('approvalForm');
+        const qtyInput = document.getElementById('good_qty');
+        const maxLabel = document.getElementById('maxQtyLabel');
+
+        form.action = '{{ url_for('qc.approve_component', component_id=0) }}'.replace('0', componentId);
+        qtyInput.max = maxQty;
+        qtyInput.value = maxQty;
+        maxLabel.textContent = maxQty;
+
+        modal.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+</script>
+
+<style>
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .data-table {
+        width: 100%;
+        min-width: 700px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem;
+    }
+
+    .component-row:hover {
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}

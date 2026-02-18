@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Contract {{ contract.contract_no }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }}</h1>
+    <div class="mt-4"><a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary mb-3">←
+            Back to Contracts</a></div>
+    <div class="card-bordered mb-4" style="max-width: 640px;">
+        <h3 class="mb-3">Contract details</h3>
+        <table>
+            <tr>
+                <td><strong>Contract No.</strong></td>
+                <td>{{ contract.contract_no }}</td>
+            </tr>
+            <tr>
+                <td><strong>Contract Date</strong></td>
+                <td>{{ contract.contract_date }}</td>
+            </tr>
+            <tr>
+                <td><strong>Contract Type</strong></td>
+                <td>{{ contract.contract_type }}</td>
+            </tr>
+            <tr>
+                <td><strong>Total Value (Rs.)</strong></td>
+                <td>{{ contract.total_value }}</td>
+            </tr>
+            <tr>
+                <td><strong>Delivery Deadline</strong></td>
+                <td>{{ contract.delivery_deadline or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Number</strong></td>
+                <td>{{ contract.bg_number or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Department</strong></td>
+                <td>{{ contract.department or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Type</strong></td>
+                <td>{{ contract.bg_type or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Amount</strong></td>
+                <td>{{ contract.bg_amount or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Expiry Date</strong></td>
+                <td>{{ contract.bg_expiry_date or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status</strong></td>
+                <td>{{ contract.contract_status }}</td>
+            </tr>
+            <tr>
+                <td><strong>Amount Given</strong></td>
+                <td>{{ contract.amount_given or 0 }}</td>
+            </tr>
+            <tr>
+                <td><strong>Amount Balance</strong></td>
+                <td>{{ contract.amount_balance or 0 }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="mb-4">
+        <button onclick="showSection('items')" class="btn btn-primary" id="btn-items">Show items</button>
+        <button onclick="showSection('inspection')" class="btn btn-secondary" id="btn-inspection">Show inspection
+            info</button>
+        <button onclick="showSection('payment')" class="btn btn-secondary" id="btn-payment">Show payment and account
+            info</button>
+    </div>
+    {% if items %}
+    <div id="section-items" class="table-container" style="display: block;">
+        <h3 class="mb-3">Items</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item name</th>
+                    <th>Part number</th>
+                    <th>Qty</th>
+                    <th>Unit price</th>
+                    <th>Total price</th>
+                    <th>Delivered qty</th>
+                    <th>Qty balance</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in items %}
+                <tr>
+                    <td>{{ i.item_name or '-' }}</td>
+                    <td>{{ i.part_number or '-' }}</td>
+                    <td>{{ i.qty }}</td>
+                    <td>{{ i.unit_price }}</td>
+                    <td>{{ i.total_price }}</td>
+                    <td>{{ i.delivered_qty or 0 }}</td>
+                    <td>{{ i.deliver_balance or 0 }}</td>
+                    <td>
+                        {% if can_delete_items(session['user_email'], line) %}
+                        <form
+                            action="{{ url_for(bp ~ '.delete_contract_item', contract_id=contract.contract_id, item_id=i.item_id) }}"
+                            method="POST" onsubmit="return confirm('Are you sure you want to delete this item?');"
+                            style="display:inline;">
+                            <button type="submit" class="btn btn-danger"
+                                style="background-color: #dc3545; border-color: #dc3545; color: white; padding: 2px 8px; font-size: 0.8em;">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="section-inspection" class="table-container" style="display: none;">
+        <h3 class="mb-3">Inspection Info</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item name</th>
+                    <th>Part number</th>
+                    <th>Inspection note no.</th>
+                    <th>Inspection note date</th>
+                    <th>Delivery no.</th>
+                    <th>Delivery date</th>
+                    <th>Warranty Expiry Date</th>
+                    <th>CRV no.</th>
+                    <th>CRV date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in items %}
+                <tr>
+                    <td>{{ i.item_name or '-' }}</td>
+                    <td>{{ i.part_number or '-' }}</td>
+                    <td>{{ i.inspection_note_no or '-' }}</td>
+                    <td>{{ i.inspection_note_date or '-' }}</td>
+                    <td>{{ i.delivery_no or '-' }}</td>
+                    <td>{{ i.delivery_date or '-' }}</td>
+                    <td>{{ i.warranty_expiry_date or '-' }}</td>
+                    <td>{{ i.crv_no or '-' }}</td>
+                    <td>{{ i.crv_date or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="section-payment" class="table-container" style="display: none;">
+        <h3 class="mb-3">Payment and Account Info</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item name</th>
+                    <th>Part number</th>
+                    <th>Invoice no.</th>
+                    <th>Submission date</th>
+                    <th>LD charges</th>
+                    <th>Income Tax</th>
+                    <th>Other Charges</th>
+                    <th>Net amount</th>
+                    <th>Cheque no.</th>
+                    <th>Cheque date</th>
+                    <th>Bank deposit date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in items %}
+                <tr>
+                    <td>{{ i.item_name or '-' }}</td>
+                    <td>{{ i.part_number or '-' }}</td>
+                    <td>{{ i.invoice_no or '-' }}</td>
+                    <td>{{ i.submission_date or '-' }}</td>
+                    <td>{{ i.ld_charges or '-' }}</td>
+                    <td>{{ i.income_tax or '-' }}</td>
+                    <td>{{ i.other_charges or '-' }}</td>
+                    <td>{{ i.net_amount or '-' }}</td>
+                    <td>{{ i.cheque_no or '-' }}</td>
+                    <td>{{ i.cheque_date or '-' }}</td>
+                    <td>{{ i.bank_deposit_date or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #666;">No items for this contract.</p>
+    {% endif %}
+    <script>
+        function showSection(section) {
+            document.getElementById('section-items').style.display = 'none';
+            document.getElementById('section-inspection').style.display = 'none';
+            document.getElementById('section-payment').style.display = 'none';
+            document.getElementById('btn-items').className = 'btn btn-secondary';
+            document.getElementById('btn-inspection').className = 'btn btn-secondary';
+            document.getElementById('btn-payment').className = 'btn btn-secondary';
+            document.getElementById('section-' + section).style.display = 'block';
+            document.getElementById('btn-' + section).className = 'btn btn-primary';
+        }
+    </script>
+    <div class="mt-4">
+        <a href="{{ url_for(bp ~ '.display_contract_list') }}" class="btn btn-secondary">← Back to list</a>
+    </div>
+</div>
+{% endblock %}

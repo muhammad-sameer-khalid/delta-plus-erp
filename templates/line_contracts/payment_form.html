@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Payment info ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – Payment (item {{ item_index + 1 }} of {{ total_items }})</h1>
+    <p class="mb-2"><strong>Item:</strong> {{ item.item_name or '-' }} | {{ item.part_number or '-' }} | Qty: {{
+        item.qty }}</p>
+    <form method="POST"
+        action="{{ url_for(bp ~ '.input_payment_iterate', contract_id=contract.contract_id) if not single else url_for(bp ~ '.input_payment_item', contract_id=contract.contract_id, item_id=item.item_id) }}"
+        style="max-width: 480px;">
+        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+        {% if not single %}<input type="hidden" name="next_index" value="{{ item_index + 1 }}">{% endif %}
+        <div class="form-group">
+            <label for="ld_charges" class="form-label">LD Charges</label>
+            <input type="number" id="ld_charges" name="ld_charges" class="form-input" step="0.01"
+                value="{{ item.ld_charges or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="income_tax" class="form-label">Income Tax</label>
+            <input type="number" id="income_tax" name="income_tax" class="form-input" step="0.01"
+                value="{{ item.income_tax or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="other_charges" class="form-label">Other Charges</label>
+            <input type="number" id="other_charges" name="other_charges" class="form-input" step="0.01"
+                value="{{ item.other_charges or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="net_amount" class="form-label">Net Amount</label>
+            <input type="number" id="net_amount" name="net_amount" class="form-input" step="0.01"
+                value="{{ item.net_amount or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="cheque_no" class="form-label">Cheque No.</label>
+            <input type="text" id="cheque_no" name="cheque_no" class="form-input" value="{{ item.cheque_no or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="cheque_date" class="form-label">Cheque Date</label>
+            <input type="date" id="cheque_date" name="cheque_date" class="form-input"
+                value="{{ item.cheque_date or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="bank_deposit_date" class="form-label">Bank Deposit Date</label>
+            <input type="date" id="bank_deposit_date" name="bank_deposit_date" class="form-input"
+                value="{{ item.bank_deposit_date or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="warranty_expiry_date" class="form-label">Warranty Expiry Date</label>
+            <input type="date" id="warranty_expiry_date" name="warranty_expiry_date" class="form-input"
+                value="{{ item.warranty_expiry_date or '' }}">
+        </div>
+        <div class="btn-group mt-3">
+            <button type="submit" class="btn btn-primary">Save{% if not single %} and next{% endif %}</button>
+            <a href="{{ url_for(bp ~ '.input_payment_choose', contract_id=contract.contract_id) if not single else url_for(bp ~ '.input_payment_specific', contract_id=contract.contract_id) }}"
+                class="btn btn-secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

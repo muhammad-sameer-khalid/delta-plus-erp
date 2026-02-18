@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Edit BOMs (Biomedical) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Edit or Delete BOMs <span style="color:#666;font-size:0.9rem;">(Biomedical)</span></h1>
+    <p>Manage existing Bill of Materials</p>
+    {% if boms %}
+    <div class="mt-4" style="max-width: 500px;">
+        <input type="text" id="bomSearch" class="form-input" placeholder="🔍 Search BOMs by name or type..." data-search-target="bomList" data-search-type="list" style="padding: 0.75rem 1rem;">
+    </div>
+    <div class="list-container mt-4" id="bomList">
+        {% for bom in boms %}
+        <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; cursor: default;">
+            <div onclick="window.location.href='{{ url_for(bp ~ '.view_bom', bom_id=bom.id) }}'" style="flex: 1; cursor: pointer;">
+                <span class="list-item-title">{{ bom.bom_name }}</span>
+                <span class="list-item-subtitle">{% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %}</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="viewBOM({{ bom.id }})" class="btn btn-secondary" style="padding: 0.5rem 1rem;">👁️ View</button>
+                <button onclick="editBOM({{ bom.id }})" class="btn btn-primary" style="padding: 0.5rem 1rem;">✏️ Edit</button>
+                <form method="POST" action="{{ url_for(bp ~ '.delete_bom', bom_id=bom.id) }}" onsubmit="return confirm('Are you sure you want to delete {{ bom.bom_name }}? This action cannot be undone.')" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem;">🗑️ Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666; font-size: 1.1rem;">No BOMs found</p>
+        <a href="{{ url_for(bp ~ '.generate_bom') }}" class="btn btn-primary mt-3">Create Your First BOM</a>
+    </div>
+    {% endif %}
+    <div class="mt-4">
+        <a href="{{ url_for(bp ~ '.rnd_dashboard') }}" class="btn btn-secondary">← Back to RND Dashboard</a>
+        <a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Biomedical Dashboard</a>
+    </div>
+</div>
+<script>
+function viewBOM(bomId) { window.location.href = '{{ url_for(bp ~ ".view_bom", bom_id=0) }}'.replace('0', bomId); }
+function editBOM(bomId) { window.location.href = '{{ url_for(bp ~ ".edit_bom_form", bom_id=0) }}'.replace('0', bomId); }
+</script>
+{% endblock %}

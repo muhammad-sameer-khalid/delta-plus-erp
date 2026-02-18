@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Delivery info - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Contract {{ contract.contract_no }} – Delivery (item {{ item_index + 1 }} of {{ total_items }})</h1>
+    <p class="mb-2"><strong>Item:</strong> {{ item.item_name or '-' }} | {{ item.part_number or '-' }} | Qty: {{
+        item.qty }} | Delivered so far: {{ item.delivered_qty or 0 }}</p>
+
+    <form method="POST"
+        action="{{ url_for('contracts_tanks.input_delivery_iterate', contract_id=contract.contract_id) if not single else url_for('contracts_tanks.input_delivery_item', contract_id=contract.contract_id, item_id=item.item_id) }}"
+        style="max-width: 400px;">
+        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+        {% if not single %}<input type="hidden" name="next_index" value="{{ item_index + 1 }}">{% endif %}
+        <div class="form-group">
+            <label for="delivered_amount" class="form-label">Delivered amount</label>
+            <input type="number" id="delivered_amount" name="delivered_amount" class="form-input" min="0"
+                max="{{ (item.qty or 0) - (item.delivered_qty or 0) }}" value="0">
+        </div>
+        <div class="form-group">
+            <label for="delivery_no" class="form-label">Delivery No.</label>
+            <input type="text" id="delivery_no" name="delivery_no" class="form-input"
+                value="{{ item.delivery_no or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="delivery_date" class="form-label">Delivery Date</label>
+            <input type="date" id="delivery_date" name="delivery_date" class="form-input"
+                value="{{ item.delivery_date or '' }}">
+        </div>
+        <div class="btn-group mt-3">
+            <button type="submit" class="btn btn-primary">Save{% if not single %} and next{% endif %}</button>
+            <a href="{{ url_for('contracts_tanks.input_delivery_choose', contract_id=contract.contract_id) if not single else url_for('contracts_tanks.input_delivery_specific', contract_id=contract.contract_id) }}"
+                class="btn btn-secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

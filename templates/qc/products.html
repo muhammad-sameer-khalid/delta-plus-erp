@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}QC Products - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Products for Quality Check</h1>
+    <p>Review and approve products from production</p>
+
+    <div class="mt-4">
+        <a href="{{ url_for('qc.qc_dashboard') }}" class="btn btn-secondary">← Back to QC Dashboard</a>
+    </div>
+
+    {% if products %}
+    <!-- Search Box -->
+    <div class="mt-4 mb-4" style="max-width: 500px;">
+        <input type="text" id="productSearch" class="form-input" placeholder="🔍 Search products..."
+            onkeyup="filterProducts()" style="padding: 0.75rem 1rem; width: 100%;">
+    </div>
+    <div class="table-container mt-4">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Part Type</th>
+                    <th>Part Value</th>
+                    <th>Footprint</th>
+                    <th>Type</th>
+                    <th>Qty</th>
+                    <th>Project Number</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td><strong>{{ product.pcb_assembly_name }}</strong></td>
+                    <td>{{ product.part_type or '-' }}</td>
+                    <td>{{ product.part_value or '-' }}</td>
+                    <td>{{ product.footprint or '-' }}</td>
+                    <td>
+                        {% if product.is_pcb %}
+                        📟 PCB
+                        {% else %}
+                        🔧 Assembly
+                        {% endif %}
+                    </td>
+                    <td>{{ product.qty }}</td>
+                    <td>{{ product.project_number or '-' }}</td>
+                    <td>
+                        <button onclick="approveProduct({{ product.id }}, {{ product.qty }})" class="btn btn-success"
+                            style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+                            ✓ Approve
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center mt-4" style="padding: 2rem; background: #f8f9fa; border-radius: 8px;">
+        <p style="color: #666;">No products pending quality check</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Approval Modal -->
+<div id="approvalModal" class="modal">
+    <div class="modal-content">
+        <h2>Approve Product</h2>
+        <form id="approvalForm" method="POST">
+            <div class="form-group">
+                <label for="good_qty" class="form-label required">Good Quantity</label>
+                <input type="number" id="good_qty" name="good_qty" class="form-input" required min="1">
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-success">✓ Approve</button>
+                <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterProducts() {
+        const input = document.getElementById('productSearch');
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const content = row.innerText.toLowerCase();
+            if (content.includes(filter)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    function approveProduct(productId, maxQty) {
+        const modal = document.getElementById('approvalModal');
+        const form = document.getElementById('approvalForm');
+        const qtyInput = document.getElementById('good_qty');
+
+        form.action = '{{ url_for('qc.approve_product', product_id=0) }}'.replace('0', productId);
+        qtyInput.max = maxQty;
+        qtyInput.value = maxQty;
+
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('approvalModal').classList.remove('active');
+    }
+</script>
+{% endblock %}

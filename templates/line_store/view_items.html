@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Store Inventory ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Store Inventory ({{ line|capitalize }})</h1>
+    <p>View items by category</p>
+    <div class="mt-4"></div>
+    <div class="mt-4">
+        {% for cat_id, cat_name in categories %}
+        <div class="card-bordered"
+            onclick="window.location.href='{{ url_for(bp ~ '.view_category', category=cat_id) }}'">
+            <h4>{{ loop.index }}. {{ cat_name }}</h4>
+            <p>Click to view inventory</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="mt-4"><a href="{{ url_for(bp ~ '.store_dashboard') }}" class="btn btn-secondary">← Back to Store
+            Dashboard</a></div>
+</div>
+{% endblock %}

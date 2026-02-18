@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}RND Dashboard - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>RND Department</h1>
+    <p>Research & Development - Bill of Materials Management</p>
+
+    <div class="mt-4">
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('rnd.generate_bom') }}'">
+            <h4>Generate Bill of Material</h4>
+            <p>Create a new BOM for PCBs or Assemblies</p>
+        </div>
+
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('rnd.display_bom') }}'">
+            <h4>Display Bill of Material</h4>
+            <p>View and search existing BOMs</p>
+        </div>
+
+        <div class="card-bordered" onclick="window.location.href='{{ url_for('rnd.edit_bom') }}'">
+            <h4>Edit or Delete Bill of Material</h4>
+            <p>Modify or remove existing BOMs</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

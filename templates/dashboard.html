@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center">Delta Plus ERP System</h1>
+    <p class="text-center" style="color: #666; font-size: 1.1rem;">Select a production line</p>
+
+    <div class="dashboard-cards">
+        {% if production_lines is defined and 'tanks' in production_lines %}
+        <div class="card" onclick="window.location.href='{{ url_for('tanks_dashboard') }}'">
+            <h3>Tanks</h3>
+            <p>Tank production management</p>
+        </div>
+        {% endif %}
+
+        {% if production_lines is defined and 'biomedical' in production_lines %}
+        <div class="card" onclick="window.location.href='{{ url_for('biomedical_dashboard') }}'">
+            <h3>Biomedical</h3>
+            <p>Biomedical production management</p>
+        </div>
+        {% endif %}
+
+        {% if production_lines is defined and 'battery' in production_lines %}
+        <div class="card" onclick="window.location.href='{{ url_for('battery_dashboard') }}'">
+            <h3>Battery</h3>
+            <p>Battery production management</p>
+        </div>
+        {% endif %}
+
+        {% if can_access_contracts %}
+        <div class="card" onclick="window.location.href='{{ url_for('contracts_main.dashboard') }}'">
+            <h3>Contracts</h3>
+            <p>Central Contracts Management</p>
+        </div>
+        {% endif %}
+
+        {% if production_lines is not defined or not production_lines %}
+        <div class="text-center mt-4">
+            <p style="color: #666;">You do not have access to any production line. Please contact your administrator.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
