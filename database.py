@@ -7,31 +7,51 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import time
+
 # Connection pool for better performance
 connection_pool = None
 
 def init_connection_pool():
-    """Initialize MySQL connection pool"""
+    """Initialize MySQL connection pool with retry logic"""
     global connection_pool
-    try:
-        connection_pool = pooling.MySQLConnectionPool(
-            pool_name="delta_plus_pool",
-            pool_size=5,
-            pool_reset_session=True,
-            **Config.DB_CONFIG
-        )
-        logger.info("MySQL connection pool created successfully")
-        return True
-    except Error as e:
-        logger.error(f"Error creating connection pool: {e}")
-        return False
+    max_retries = 5
+    retry_delay = 2  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Attempting to connect to database (Attempt {attempt + 1}/{max_retries})...")
+            connection_pool = pooling.MySQLConnectionPool(
+                pool_name="delta_plus_pool",
+                pool_size=5,
+                pool_reset_session=True,
+                **Config.DB_CONFIG
+            )
+            logger.info("MySQL connection pool created successfully")
+            return True
+        except Error as e:
+            logger.error(f"Error creating connection pool: {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                logger.error("Max retries reached. Could not connect to database.")
+                return False
+    return False
 
 def get_db_connection():
     """Get a connection from the pool"""
     try:
         if connection_pool is None:
-            init_connection_pool()
-        return connection_pool.get_connection()
+            if not init_connection_pool():
+                logger.error("Failed to initialize connection pool.")
+                return None
+        
+        # Double check pool is not None after attempt
+        if connection_pool:
+            return connection_pool.get_connection()
+        return None
+        
     except Error as e:
         logger.error(f"Error getting connection from pool: {e}")
         return None
