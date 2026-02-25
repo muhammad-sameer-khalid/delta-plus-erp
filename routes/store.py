@@ -667,4 +667,79 @@ def delete_item(category, item_id):
     return redirect(url_for('store.view_category', category=category))
 
 
+@bp.route('/manual-entry')
+@module_access_required('store')
+def manual_entry():
+    """Show manual item entry form"""
+    return render_template('store/manual_entry.html',
+                           categories=CATEGORIES,
+                           show_nav_menu=True,
+                           accessible_modules=_get_accessible_modules())
 
+@bp.route('/manual-entry/submit', methods=['POST'])
+@module_access_required('store')
+def manual_entry_submit():
+    """Save a manually entered item directly into the store"""
+    item_type      = request.form.get('item_type', '').strip()
+    part_type      = request.form.get('part_type', '').strip()
+    part_value     = request.form.get('part_value', '').strip()
+    part_desc      = request.form.get('part_description', '').strip()
+    footprint      = request.form.get('footprint', '').strip()
+    po_no          = request.form.get('po_no', '').strip()
+    project_number = request.form.get('project_number', '').strip()
+    category       = request.form.get('category', '').strip()
+    section        = request.form.get('section', '').strip()
+
+    try:
+        qty = int(request.form.get('qty', 1) or 1)
+    except (ValueError, TypeError):
+        qty = 1
+
+    if not item_type or not category:
+        flash('Type and Category are required', 'error')
+        return redirect(url_for('store.manual_entry'))
+
+    if qty < 1:
+        flash('Quantity must be at least 1', 'error')
+        return redirect(url_for('store.manual_entry'))
+
+    valid_cats = [c[0] for c in CATEGORIES]
+    if category not in valid_cats:
+        flash('Invalid category selected', 'error')
+        return redirect(url_for('store.manual_entry'))
+
+    table = f'store_{category}'
+
+    # Merge qty if identical item already exists
+    check_q = f"""
+        SELECT id, qty, po_no FROM {table}
+        WHERE COALESCE(part_type,'') = COALESCE(%s,'')
+          AND COALESCE(part_value,'') = COALESCE(%s,'')
+          AND COALESCE(part_description,'') = COALESCE(%s,'')
+          AND COALESCE(footprint,'') = COALESCE(%s,'')
+        LIMIT 1
+    """
+    existing = execute_query(check_q, (part_type, part_value, part_desc, footprint), fetch_one=True)
+
+    if existing:
+        new_qty = existing['qty'] + qty
+        existing_po = existing.get('po_no') or ''
+        updated_po = f"{existing_po}, {po_no}" if (po_no and po_no not in existing_po and existing_po) else (po_no if po_no else existing_po)
+        execute_query(
+            f"UPDATE {table} SET qty = %s, po_no = %s WHERE id = %s",
+            (new_qty, updated_po, existing['id']),
+            commit=True
+        )
+        flash(f'Item merged with existing inventory. New quantity: {new_qty}', 'success')
+    else:
+        execute_query(
+            f"""INSERT INTO {table}
+                (part_type, part_value, part_description, footprint, qty, po_no, section, project_number)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (part_type, part_value, part_desc, footprint, qty, po_no, section, project_number),
+            commit=True
+        )
+        cat_name = dict(CATEGORIES).get(category, category)
+        flash(f'Item added to {cat_name} successfully', 'success')
+
+    return redirect(url_for('store.manual_entry'))

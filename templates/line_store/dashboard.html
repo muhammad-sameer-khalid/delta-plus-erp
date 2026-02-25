@@ -22,6 +22,10 @@
             <h4>View Issues</h4>
             <p>View issue history</p>
         </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.manual_entry') }}'">
+            <h4>Enter Items Manually</h4>
+            <p>Add items directly to store without the usual workflow</p>
+        </div>
     </div>
 </div>
 {% endblock %}

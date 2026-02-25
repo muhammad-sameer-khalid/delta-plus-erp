@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Enter Items Manually - Store - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Enter Items Manually</h1>
+    <p>Add items directly to store inventory without following the standard workflow.</p>
+
+    <div class="form-container mt-4" style="max-width: 750px; margin: 2rem auto;">
+        <form method="POST" action="{{ url_for('store.manual_entry_submit') }}">
+
+            <div class="form-group">
+                <label class="form-label required">Type</label>
+                <select name="item_type" class="form-select" required>
+                    <option value="">Select type...</option>
+                    <option value="product">Product</option>
+                    <option value="component">Component</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Part Type</label>
+                <input type="text" name="part_type" class="form-input" placeholder="e.g. Resistor, IC, PCB">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Part Value</label>
+                <input type="text" name="part_value" class="form-input" placeholder="e.g. 10k, LM358, Arduino Nano">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Part Description</label>
+                <input type="text" name="part_description" class="form-input" placeholder="e.g. 1/4W 5% Through-hole">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Footprint</label>
+                <input type="text" name="footprint" class="form-input" placeholder="e.g. 0402, DIP-8, TO-92">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Quantity</label>
+                <input type="number" name="qty" class="form-input" required min="1" value="1" placeholder="1">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">PO Number</label>
+                <input type="text" name="po_no" class="form-input" placeholder="e.g. PO-001">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Project Number</label>
+                <input type="text" name="project_number" class="form-input" placeholder="e.g. PROJ-123">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Category</label>
+                <select name="category" class="form-select" required>
+                    <option value="">Select category...</option>
+                    {% for cat_key, cat_name in categories %}
+                    <option value="{{ cat_key }}">{{ cat_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Section</label>
+                <input type="text" name="section" class="form-input" placeholder="e.g. Shelf A, Cabinet 3">
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('store.store_dashboard') }}" class="btn btn-secondary">← Cancel</a>
+                <button type="submit" class="btn btn-primary">Add to Store</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+</style>
+{% endblock %}
