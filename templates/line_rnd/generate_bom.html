@@ -17,6 +17,7 @@
                 <option value="">Select type...</option>
                 <option value="PCB">PCB</option>
                 <option value="Assembly">Assembly</option>
+                <option value="Consumables">Consumables</option>
             </select>
         </div>
         <hr style="margin: 2rem 0;">
@@ -27,20 +28,20 @@
                 style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9ACF59;">
                 <h4 style="margin-bottom: 1rem;">Component 1</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                    <div class="form-group"><label class="form-label required">Designator</label><input type="text"
-                            name="designator_0" class="form-input" required placeholder="e.g., R1, C1, U1"></div>
-                    <div class="form-group"><label class="form-label required">Part Type</label><input type="text"
-                            name="part_type_0" class="form-input" required placeholder="e.g., Resistor, Capacitor">
+                    <div class="form-group"><label class="form-label">Designator</label><input type="text"
+                            name="designator_0" class="form-input" placeholder="e.g., R1, C1, U1"></div>
+                    <div class="form-group"><label class="form-label">Part Type</label><input type="text"
+                            name="part_type_0" class="form-input" placeholder="e.g., Resistor, Capacitor">
                     </div>
-                    <div class="form-group"><label class="form-label required">Part Value</label><input type="text"
-                            name="part_value_0" class="form-input" required placeholder="e.g., 10K, 100nF"></div>
-                    <div class="form-group"><label class="form-label required">Part Description</label><input
-                            type="text" name="part_description_0" class="form-input" required placeholder="Description">
+                    <div class="form-group"><label class="form-label">Part Value</label><input type="text"
+                            name="part_value_0" class="form-input" placeholder="e.g., 10K, 100nF"></div>
+                    <div class="form-group"><label class="form-label">Part Description</label><input type="text"
+                            name="part_description_0" class="form-input" placeholder="Description">
                     </div>
-                    <div class="form-group"><label class="form-label required">Footprint</label><input type="text"
-                            name="footprint_0" class="form-input" required placeholder="e.g., 0805, SOIC-8"></div>
-                    <div class="form-group"><label class="form-label required">Quantity</label><input type="number"
-                            name="qty_0" class="form-input" required min="1" value="1"></div>
+                    <div class="form-group"><label class="form-label">Footprint</label><input type="text"
+                            name="footprint_0" class="form-input" placeholder="e.g., 0805, SOIC-8"></div>
+                    <div class="form-group"><label class="form-label">Quantity</label><input type="number" name="qty_0"
+                            class="form-input" min="1" value="1"></div>
                 </div>
             </div>
         </div>
@@ -62,12 +63,12 @@
         <button type="button" onclick="this.parentElement.remove()" style="position: absolute; top: 1rem; right: 1rem; background: #e74c3c; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">✕ Remove</button>
         <h4 style="margin-bottom: 1rem;">Component ${componentCount}</h4>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-            <div class="form-group"><label class="form-label required">Designator</label><input type="text" name="designator_${componentCount - 1}" class="form-input" required placeholder="e.g., R1, C1, U1"></div>
-            <div class="form-group"><label class="form-label required">Part Type</label><input type="text" name="part_type_${componentCount - 1}" class="form-input" required placeholder="e.g., Resistor, Capacitor"></div>
-            <div class="form-group"><label class="form-label required">Part Value</label><input type="text" name="part_value_${componentCount - 1}" class="form-input" required placeholder="e.g., 10K, 100nF"></div>
-            <div class="form-group"><label class="form-label required">Part Description</label><input type="text" name="part_description_${componentCount - 1}" class="form-input" required placeholder="Description"></div>
-            <div class="form-group"><label class="form-label required">Footprint</label><input type="text" name="footprint_${componentCount - 1}" class="form-input" required placeholder="e.g., 0805, SOIC-8"></div>
-            <div class="form-group"><label class="form-label required">Quantity</label><input type="number" name="qty_${componentCount - 1}" class="form-input" required min="1" value="1"></div>
+            <div class="form-group"><label class="form-label">Designator</label><input type="text" name="designator_${componentCount - 1}" class="form-input" placeholder="e.g., R1, C1, U1"></div>
+            <div class="form-group"><label class="form-label">Part Type</label><input type="text" name="part_type_${componentCount - 1}" class="form-input" placeholder="e.g., Resistor, Capacitor"></div>
+            <div class="form-group"><label class="form-label">Part Value</label><input type="text" name="part_value_${componentCount - 1}" class="form-input" placeholder="e.g., 10K, 100nF"></div>
+            <div class="form-group"><label class="form-label">Part Description</label><input type="text" name="part_description_${componentCount - 1}" class="form-input" placeholder="Description"></div>
+            <div class="form-group"><label class="form-label">Footprint</label><input type="text" name="footprint_${componentCount - 1}" class="form-input" placeholder="e.g., 0805, SOIC-8"></div>
+            <div class="form-group"><label class="form-label">Quantity</label><input type="number" name="qty_${componentCount - 1}" class="form-input" min="1" value="1"></div>
         </div>
     </div>`;
         container.insertAdjacentHTML('beforeend', componentHtml);

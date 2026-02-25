@@ -122,7 +122,7 @@ def generate_bom():
                 'part_value': request.form.get(f'part_value_{i}', ''),
                 'part_description': request.form.get(f'part_description_{i}', ''),
                 'footprint': request.form.get(f'footprint_{i}', ''),
-                'qty': int(request.form.get(f'qty_{i}', 0))
+                'qty': int(request.form.get(f'qty_{i}', '') or 1)
             }
             components.append(component)
             i += 1
