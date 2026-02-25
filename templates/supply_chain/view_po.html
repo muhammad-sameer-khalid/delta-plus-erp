@@ -82,7 +82,7 @@
         <strong>Projects:</strong>
         <ol style="margin: 0.5rem 0 0 1.5rem;">
             {% for project, subtotal in project_subtotals.items() %}
-            <li>{{ project }}: ¥ {{ "%.2f"|format(subtotal) }}</li>
+            <li>{{ project }}: {{ currency }} {{ "%.2f"|format(subtotal) }}</li>
             {% endfor %}
         </ol>
     </div>
@@ -99,8 +99,8 @@
                     <th>Part Description</th>
                     <th>Footprint</th>
                     <th>Qty</th>
-                    <th>RMB in ¥</th>
-                    <th>Total Price in ¥</th>
+                    <th>{{ currency }} Unit Price</th>
+                    <th>Total Price in {{ currency }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -119,7 +119,7 @@
             </tbody>
             <tfoot>
                 <tr class="grand-total-row">
-                    <td colspan="7" style="text-align: right;"><strong>Grand Total in ¥</strong></td>
+                    <td colspan="7" style="text-align: right;"><strong>Grand Total in {{ currency }}</strong></td>
                     <td style="text-align: right;"><strong>{{ "%.2f"|format(grand_total) }}</strong></td>
                 </tr>
                 <tr class="contact-row">

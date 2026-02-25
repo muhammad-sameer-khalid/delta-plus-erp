@@ -508,6 +508,15 @@ def create_po_metadata_table():
     """Create purchase order metadata table"""
     if table_exists('po_metadata'):
         logger.info("PO metadata table already exists")
+        # Run migration: add currency column if missing
+        result = execute_query(
+            "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS "
+            "WHERE TABLE_NAME='po_metadata' AND COLUMN_NAME='currency'",
+            fetch_one=True
+        )
+        if result and result['cnt'] == 0:
+            execute_query("ALTER TABLE po_metadata ADD COLUMN currency VARCHAR(20) DEFAULT 'RMB'", commit=True)
+            logger.info("Added currency column to po_metadata")
         return
     
     query = """
@@ -519,6 +528,7 @@ def create_po_metadata_table():
         supplier_address TEXT NOT NULL,
         supplier_telephone VARCHAR(50) NOT NULL,
         supplier_postal_code VARCHAR(20) NOT NULL,
+        currency VARCHAR(20) DEFAULT 'RMB',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_po_number (po_number)
     )

@@ -94,6 +94,7 @@ def generate_po():
 def generate_po_select_demand():
     if request.method == 'POST':
         po_number = request.form.get('po_number', '').strip()
+        currency = request.form.get('currency', 'RMB').strip().upper() or 'RMB'
         if not po_number:
             flash('Please enter a PO number', 'error')
             return redirect(url_for(f'{BP}.generate_po'))
@@ -101,9 +102,10 @@ def generate_po_select_demand():
             flash(f'PO {po_number} already exists', 'error')
             return redirect(url_for(f'{BP}.generate_po'))
         if SESSION_PO not in session:
-            session[SESSION_PO] = {'po_number': po_number, 'components': []}
+            session[SESSION_PO] = {'po_number': po_number, 'currency': currency, 'components': []}
         else:
             session[SESSION_PO]['po_number'] = po_number
+            session[SESSION_PO]['currency'] = currency
         session.modified = True
     if SESSION_PO not in session:
         flash('PO session expired. Please start over.', 'error')
@@ -139,7 +141,7 @@ def generate_po_add_components():
     if not components:
         flash(f'No components found in demand note {demand_no}', 'error')
         return redirect(url_for(f'{BP}.generate_po_select_demand'))
-    return render_template(TP + 'generate_po_step3.html', demand_no=demand_no, components=components, po_number=session[SESSION_PO]['po_number'], show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
+    return render_template(TP + 'generate_po_step3.html', demand_no=demand_no, components=components, po_number=session[SESSION_PO]['po_number'], currency=session[SESSION_PO].get('currency', 'RMB'), show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
 
 @bp.route('/generate-po/save-components', methods=['POST'])
 @module_access_required('supply_chain', LINE)
@@ -195,7 +197,7 @@ def generate_po_review():
     deduplicated_components = deduplicate_po_components(components)
     demands_list = execute_query(f"SELECT demand_no FROM {_dn()} WHERE approved = TRUE AND supply_chain_archived = FALSE ORDER BY demand_no DESC", fetch=True)
     demand_numbers = [d['demand_no'] for d in demands_list] if demands_list else []
-    return render_template(TP + 'generate_po_review.html', po_draft=po_draft, demand_groups=demand_groups, deduplicated_components=deduplicated_components, demand_numbers=demand_numbers, show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
+    return render_template(TP + 'generate_po_review.html', po_draft=po_draft, demand_groups=demand_groups, deduplicated_components=deduplicated_components, demand_numbers=demand_numbers, currency=po_draft.get('currency', 'RMB'), show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
 
 @bp.route('/generate-po/remove-demand/<demand_no>', methods=['POST'])
 @module_access_required('supply_chain', LINE)
@@ -218,7 +220,7 @@ def generate_po_supplier_form():
     if SESSION_PO not in session or not session[SESSION_PO].get('components'):
         flash('No components in PO draft', 'error')
         return redirect(url_for(f'{BP}.generate_po'))
-    return render_template(TP + 'generate_po_supplier.html', po_number=session[SESSION_PO]['po_number'], show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
+    return render_template(TP + 'generate_po_supplier.html', po_number=session[SESSION_PO]['po_number'], currency=session[SESSION_PO].get('currency', 'RMB'), show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
 
 @bp.route('/generate-po/finalize', methods=['POST'])
 @module_access_required('supply_chain', LINE)
@@ -236,12 +238,13 @@ def generate_po_finalize():
         return redirect(url_for(f'{BP}.generate_po_supplier_form'))
     po_draft = session[SESSION_PO]
     po_number = po_draft['po_number']
+    currency = po_draft.get('currency', 'RMB')
     raw_components = po_draft['components']
     components = deduplicate_po_components(raw_components)
     execute_query(f"""
-        INSERT INTO {_po_meta()} (po_number, supplier_name, supplier_company, supplier_address, supplier_telephone, supplier_postal_code)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (po_number, supplier_name, supplier_company, supplier_address, supplier_telephone, supplier_postal_code), commit=True)
+        INSERT INTO {_po_meta()} (po_number, supplier_name, supplier_company, supplier_address, supplier_telephone, supplier_postal_code, currency)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (po_number, supplier_name, supplier_company, supplier_address, supplier_telephone, supplier_postal_code, currency), commit=True)
     po_row = execute_query(f"SELECT id FROM {_po_meta()} WHERE po_number = %s", (po_number,), fetch_one=True)
     po_id = po_row['id'] if po_row else None
     if not po_id:
@@ -285,7 +288,7 @@ def view_po(po_number):
         project_subtotals[project] += float(item.get('total_price', 0))
     grand_total = sum(project_subtotals.values())
     current_date = datetime.now().strftime('%Y-%m-%d')
-    return render_template(TP + 'view_po.html', po=po_meta, items=items or [], project_subtotals=project_subtotals, grand_total=grand_total, current_date=current_date, show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
+    return render_template(TP + 'view_po.html', po=po_meta, items=items or [], project_subtotals=project_subtotals, grand_total=grand_total, current_date=current_date, currency=po_meta.get('currency', 'RMB'), show_nav_menu=True, accessible_modules=_accessible(), line=LINE, bp=BP)
 
 
 @bp.route('/delete-po/<po_number>', methods=['POST'])

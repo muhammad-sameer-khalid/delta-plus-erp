@@ -10,7 +10,7 @@
     <div class="form-container mt-4">
         <form method="POST" action="{{ url_for('supply_chain.generate_po_save_components') }}">
             <input type="hidden" name="demand_no" value="{{ demand_no }}">
-            
+
             <div class="table-container">
                 <table class="data-table">
                     <thead>
@@ -24,16 +24,15 @@
                             <th>Footprint</th>
                             <th>Qty</th>
                             <th>Project</th>
-                            <th>Price in ¥</th>
+                            <th>Price in {{ currency }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for comp in components %}
                         <tr id="row_{{ loop.index0 }}">
                             <td>
-                                <input type="checkbox" name="selected" value="{{ loop.index0 }}" 
-                                       onchange="togglePriceField({{ loop.index0 }})" checked 
-                                       class="component-checkbox">
+                                <input type="checkbox" name="selected" value="{{ loop.index0 }}"
+                                    onchange="togglePriceField({{ loop.index0 }})" checked class="component-checkbox">
                             </td>
                             <td>{{ comp.part_type }}</td>
                             <td>{{ comp.part_value }}</td>
@@ -42,11 +41,9 @@
                             <td><strong>{{ comp.qty }}</strong></td>
                             <td>{{ comp.project }}</td>
                             <td>
-                                <input type="number" name="unit_price_{{ loop.index0 }}" 
-                                       id="price_{{ loop.index0 }}"
-                                       class="form-input price-input" 
-                                       step="0.01" min="0" placeholder="0.00" 
-                                       style="width: 120px;">
+                                <input type="number" name="unit_price_{{ loop.index0 }}" id="price_{{ loop.index0 }}"
+                                    class="form-input price-input" step="0.01" min="0" placeholder="0.00"
+                                    style="width: 120px;">
                             </td>
                         </tr>
                         {% endfor %}
@@ -63,41 +60,41 @@
 </div>
 
 <script>
-function toggleAll(checkbox) {
-    const checkboxes = document.querySelectorAll('.component-checkbox');
-    checkboxes.forEach(cb => {
-        cb.checked = checkbox.checked;
-        const index = cb.value;
-        togglePriceField(index);
-    });
-}
-
-function togglePriceField(index) {
-    const checkbox = document.querySelector(`input[name="selected"][value="${index}"]`);
-    const priceField = document.getElementById(`price_${index}`);
-    const row = document.getElementById(`row_${index}`);
-    
-    if (checkbox.checked) {
-        priceField.disabled = false;
-        priceField.style.background = 'white';
-        priceField.required = true;
-        row.style.opacity = '1';
-    } else {
-        priceField.disabled = true;
-        priceField.style.background = '#e0e0e0';
-        priceField.required = false;
-        priceField.value = '';
-        row.style.opacity = '0.5';
+    function toggleAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.component-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+            const index = cb.value;
+            togglePriceField(index);
+        });
     }
-}
 
-// Initialize all price fields as enabled
-window.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.component-checkbox');
-    checkboxes.forEach(cb => {
-        togglePriceField(cb.value);
+    function togglePriceField(index) {
+        const checkbox = document.querySelector(`input[name="selected"][value="${index}"]`);
+        const priceField = document.getElementById(`price_${index}`);
+        const row = document.getElementById(`row_${index}`);
+
+        if (checkbox.checked) {
+            priceField.disabled = false;
+            priceField.style.background = 'white';
+            priceField.required = true;
+            row.style.opacity = '1';
+        } else {
+            priceField.disabled = true;
+            priceField.style.background = '#e0e0e0';
+            priceField.required = false;
+            priceField.value = '';
+            row.style.opacity = '0.5';
+        }
+    }
+
+    // Initialize all price fields as enabled
+    window.addEventListener('DOMContentLoaded', function () {
+        const checkboxes = document.querySelectorAll('.component-checkbox');
+        checkboxes.forEach(cb => {
+            togglePriceField(cb.value);
+        });
     });
-});
 </script>
 
 <style>
@@ -116,7 +113,8 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     .data-table {
-        min-width: 900px; /* Ensures table doesn't compress too much */
+        min-width: 900px;
+        /* Ensures table doesn't compress too much */
     }
 
     .data-table td,

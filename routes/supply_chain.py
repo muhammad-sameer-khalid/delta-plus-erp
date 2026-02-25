@@ -142,6 +142,7 @@ def generate_po_select_demand():
     """Step 2: Select demand note from dropdown"""
     if request.method == 'POST':
         po_number = request.form.get('po_number', '').strip()
+        currency = request.form.get('currency', 'RMB').strip().upper() or 'RMB'
         
         if not po_number:
             flash('Please enter a PO number', 'error')
@@ -158,10 +159,12 @@ def generate_po_select_demand():
         if 'po_draft' not in session:
             session['po_draft'] = {
                 'po_number': po_number,
+                'currency': currency,
                 'components': []
             }
         else:
             session['po_draft']['po_number'] = po_number
+            session['po_draft']['currency'] = currency
         
         session.modified = True
     
@@ -223,6 +226,7 @@ def generate_po_add_components():
                          demand_no=demand_no,
                          components=components,
                          po_number=session['po_draft']['po_number'],
+                         currency=session['po_draft'].get('currency', 'RMB'),
                          show_nav_menu=True,
                          accessible_modules=get_accessible_modules())
 
@@ -314,6 +318,7 @@ def generate_po_review():
                          demand_groups=demand_groups,
                          deduplicated_components=deduplicated_components,
                          demand_numbers=demand_numbers,
+                         currency=po_draft.get('currency', 'RMB'),
                          show_nav_menu=True,
                          accessible_modules=get_accessible_modules())
 
@@ -353,6 +358,7 @@ def generate_po_supplier_form():
     
     return render_template('supply_chain/generate_po_supplier.html',
                          po_number=session['po_draft']['po_number'],
+                         currency=session['po_draft'].get('currency', 'RMB'),
                          show_nav_menu=True,
                          accessible_modules=get_accessible_modules())
 
@@ -377,6 +383,7 @@ def generate_po_finalize():
     
     po_draft = session['po_draft']
     po_number = po_draft['po_number']
+    currency = po_draft.get('currency', 'RMB')
     raw_components = po_draft['components']
     
     # Deduplicate components before saving
@@ -387,12 +394,12 @@ def generate_po_finalize():
     insert_meta_query = """
         INSERT INTO po_metadata 
         (po_number, supplier_name, supplier_company, supplier_address, 
-         supplier_telephone, supplier_postal_code)
-        VALUES (%s, %s, %s, %s, %s, %s)
+         supplier_telephone, supplier_postal_code, currency)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
     execute_query(insert_meta_query, 
                  (po_number, supplier_name, supplier_company, supplier_address,
-                  supplier_telephone, supplier_postal_code),
+                  supplier_telephone, supplier_postal_code, currency),
                  commit=True)
     
     po_row = execute_query("SELECT id FROM po_metadata WHERE po_number = %s", (po_number,), fetch_one=True)
@@ -493,6 +500,7 @@ def view_po(po_number):
                          project_subtotals=project_subtotals,
                          grand_total=grand_total,
                          current_date=current_date,
+                         currency=po_meta.get('currency', 'RMB'),
                          show_nav_menu=True,
                          accessible_modules=get_accessible_modules())
 

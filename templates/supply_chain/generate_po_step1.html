@@ -5,18 +5,25 @@
 {% block content %}
 <div class="container">
     <h1>Generate Purchase Order</h1>
-    <p>Step 1 of 7: Enter PO Number</p>
+    <p>Step 1 of 7: Enter PO Number & Currency</p>
 
     <div class="form-container mt-4" style="max-width: 600px; margin: 2rem auto;">
         <form method="POST" action="{{ url_for('supply_chain.generate_po_select_demand') }}">
             <div class="form-group">
                 <label for="po_number" class="form-label required">PO Number</label>
-                <input type="text" id="po_number" name="po_number" class="form-input" 
-                       required placeholder="e.g. PO-001, PO-123" 
-                       pattern="PO-\d+" 
-                       title="Format: PO-XXX (where XXX is a number)">
+                <input type="text" id="po_number" name="po_number" class="form-input" required
+                    placeholder="e.g. PO-001, PO-123" pattern="PO-\d+" title="Format: PO-XXX (where XXX is a number)">
                 <small style="color: #666; display: block; margin-top: 0.5rem;">
                     Format: PO-XXX (e.g. PO-228)
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="currency" class="form-label required">Currency</label>
+                <input type="text" id="currency" name="currency" class="form-input" required
+                    placeholder="e.g. RMB, USD, RS" maxlength="20" style="text-transform: uppercase;">
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    Enter currency code (e.g. RMB, USD, RS, EUR)
                 </small>
             </div>
 
