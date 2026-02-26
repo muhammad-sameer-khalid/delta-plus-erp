@@ -131,48 +131,72 @@ def admin():
 @app.route('/admin/sync-database')
 @role_required('director', 'general manager', 'gm logistics')
 def sync_database():
-    """Generate a full mysqldump and serve it as a .sql download."""
-    import subprocess
-    import tempfile
+    """Generate a full SQL dump using Python and serve it as a .sql download."""
+    import io
     from flask import send_file
-    from config import Config
-
-    db_host = getattr(Config, 'DB_HOST', 'localhost')
-    db_user = getattr(Config, 'DB_USER', 'root')
-    db_password = getattr(Config, 'DB_PASSWORD', '')
-    db_name = getattr(Config, 'DB_NAME', 'delta_plus_erp')
+    from database import execute_query
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'delta_plus_erp_backup_{timestamp}.sql'
 
     try:
-        # Build mysqldump command
-        cmd = ['mysqldump', f'--host={db_host}', f'--user={db_user}']
-        if db_password:
-            cmd.append(f'--password={db_password}')
-        cmd += ['--single-transaction', '--routines', '--triggers', db_name]
+        lines = []
+        lines.append("-- Delta Plus ERP Database Backup")
+        lines.append(f"-- Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append("-- ------------------------------------------------")
+        lines.append("SET FOREIGN_KEY_CHECKS=0;")
+        lines.append("SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';")
+        lines.append("SET NAMES utf8mb4;")
+        lines.append("")
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        if result.returncode != 0:
-            flash(f'Database sync failed: {result.stderr[:200]}', 'error')
-            return redirect(url_for('admin'))
+        # Get all tables
+        tables = execute_query("SHOW TABLES", fetch=True) or []
+        table_names = [list(t.values())[0] for t in tables]
 
-        # Write to temp file and send as download
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.sql', mode='w', encoding='utf-8')
-        tmp.write(result.stdout)
-        tmp.close()
+        for table in table_names:
+            # Get CREATE TABLE statement
+            create = execute_query(f"SHOW CREATE TABLE `{table}`", fetch_one=True)
+            if create:
+                create_sql = list(create.values())[1]
+                lines.append(f"-- Table: {table}")
+                lines.append(f"DROP TABLE IF EXISTS `{table}`;")
+                lines.append(create_sql + ";")
+                lines.append("")
+
+            # Get all rows
+            rows = execute_query(f"SELECT * FROM `{table}`", fetch=True) or []
+            if rows:
+                cols = ', '.join(f'`{c}`' for c in rows[0].keys())
+                lines.append(f"-- Data for {table}")
+                for row in rows:
+                    values = []
+                    for v in row.values():
+                        if v is None:
+                            values.append('NULL')
+                        elif isinstance(v, (int, float)):
+                            values.append(str(v))
+                        else:
+                            escaped = str(v).replace("\\", "\\\\").replace("'", "\\'")
+                            values.append(f"'{escaped}'")
+                    lines.append(f"INSERT INTO `{table}` ({cols}) VALUES ({', '.join(values)});")
+                lines.append("")
+
+        lines.append("SET FOREIGN_KEY_CHECKS=1;")
+        lines.append("-- End of backup")
+
+        sql_content = "\n".join(lines)
+        buf = io.BytesIO(sql_content.encode('utf-8'))
+        buf.seek(0)
 
         return send_file(
-            tmp.name,
+            buf,
             as_attachment=True,
             download_name=filename,
             mimetype='application/sql'
         )
-    except FileNotFoundError:
-        flash('mysqldump not found. Make sure MySQL is installed and mysqldump is in the system PATH.', 'error')
-        return redirect(url_for('admin'))
-    except subprocess.TimeoutExpired:
-        flash('Database sync timed out. Try again.', 'error')
+
+    except Exception as e:
+        flash(f'Database sync failed: {str(e)[:300]}', 'error')
         return redirect(url_for('admin'))
 
 
