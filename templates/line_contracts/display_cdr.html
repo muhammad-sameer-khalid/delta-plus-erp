@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Display CDR – {{ line|capitalize }} – Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+        <div>
+            <h1 class="mb-0">Call Deposit Receipts – {{ line|capitalize }}</h1>
+            <p class="text-muted mb-0">All CDR records for this production line.</p>
+        </div>
+        <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    <!-- Predictive Search -->
+    <div class="mb-4 d-flex align-items-center bg-light rounded"
+        style="max-width:660px; border: 1px solid #ddd; padding: 12px 16px;">
+        <span class="text-muted" style="font-size: 1.3rem; margin-right: 12px;">🔍</span>
+        <input type="text" id="cdr-search"
+            style="flex-grow:1; border:none; background:transparent; outline:none; font-size:1.1rem; padding:8px 0;"
+            placeholder="Search by CDR No., Date, Tender No., Organization, Amount, Bank...">
+    </div>
+
+    {% if cdrs %}
+    <div style="overflow-x:auto;">
+        <table class="table table-bordered table-sm" id="cdr-table">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date of CDR</th>
+                    <th>CDR No.</th>
+                    <th>CDR Ref. No.</th>
+                    <th>Bank</th>
+                    <th>CDR Amount</th>
+                    <th>Organization</th>
+                    <th>Tender No.</th>
+                    <th>Tender Submission Date</th>
+                    <th>Quoted Item</th>
+                    <th>CDR Receiving Date</th>
+                    <th>Remarks</th>
+                    <th>PV No.</th>
+                    <th>PV Date</th>
+                    <th>Status</th>
+                    <th>Release Date</th>
+                    <th>RV No.</th>
+                    <th>RV Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in cdrs %}
+                <tr
+                    data-search="{{ (c.cdr_no or '')|lower }} {{ (c.cdr_date or '')|string }} {{ (c.tender_no or '')|lower }} {{ (c.organization or '')|lower }} {{ (c.cdr_amount or '')|string }} {{ (c.bank or '')|lower }} {{ (c.cdr_receiving_date or '')|string }} {{ (c.tender_submission_date or '')|string }}">
+                    <td>{{ c.cdr_date or '—' }}</td>
+                    <td>{{ c.cdr_no or '—' }}</td>
+                    <td>{{ c.cdr_ref_no or '—' }}</td>
+                    <td>{{ c.bank or '—' }}</td>
+                    <td>{{ c.cdr_amount or '—' }}</td>
+                    <td>{{ c.organization or '—' }}</td>
+                    <td>{{ c.tender_no or '—' }}</td>
+                    <td>{{ c.tender_submission_date or '—' }}</td>
+                    <td>{{ c.quoted_item or '—' }}</td>
+                    <td>{{ c.cdr_receiving_date or '—' }}</td>
+                    <td>{{ c.remarks or '—' }}</td>
+                    <td>{{ c.pv_no or '—' }}</td>
+                    <td>{{ c.pv_date or '—' }}</td>
+                    <td>{{ c.status or '—' }}</td>
+                    <td>{{ c.release_date or '—' }}</td>
+                    <td>{{ c.rv_no or '—' }}</td>
+                    <td>{{ c.rv_date or '—' }}</td>
+                    <td>
+                        {% set can_delete = 'data_entry_bg' not in (user_roles or []) and 'data_entry_accounts' not in
+                        (user_roles or []) %}
+                        {% if can_delete %}
+                        <form method="POST" action="{{ url_for(bp ~ '.delete_cdr', cdr_id=c.cdr_id) }}"
+                            onsubmit="return confirm('Delete CDR {{ c.cdr_no or c.cdr_id }}? This cannot be undone.')">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No CDR records found.</p>
+    {% endif %}
+</div>
+
+<script>
+    (function () {
+        const input = document.getElementById('cdr-search');
+        const rows = document.querySelectorAll('#cdr-table tbody tr');
+        input.addEventListener('input', function () {
+            const q = this.value.toLowerCase().trim();
+            rows.forEach(function (row) {
+                const haystack = row.getAttribute('data-search') || '';
+                row.style.display = (!q || haystack.includes(q)) ? '' : 'none';
+            });
+        });
+    })();
+</script>
+{% endblock %}

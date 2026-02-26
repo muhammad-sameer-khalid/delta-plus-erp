@@ -269,10 +269,14 @@ function selectAllRows(checkbox, tableId) {
 
 // Number Formatting
 function formatNumber(num) {
-    return new Intl.NumberFormat('en-US').format(num);
+    if (num === null || num === undefined || num === '') return '0.00';
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(num);
 }
 
-function formatCurrency(amount, currency = '¥') {
+function formatCurrency(amount, currency = 'Rs.') {
     return `${currency} ${formatNumber(amount)}`;
 }
 

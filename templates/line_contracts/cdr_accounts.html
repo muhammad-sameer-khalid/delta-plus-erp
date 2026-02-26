@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}CDR Accounts Info – {{ cdr.cdr_no or 'CDR' }} – {{ line|capitalize }} – Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+        <div>
+            <h1 class="mb-0">CDR Accounts Info – {{ line|capitalize }}</h1>
+            <p class="text-muted mb-0">Enter or update accounts information for CDR: <strong>{{ cdr.cdr_no or '—'
+                    }}</strong></p>
+        </div>
+        <a href="{{ url_for(bp ~ '.cdr_accounts_list') }}" class="btn btn-secondary">← Back to CDR List</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <!-- CDR Summary (read-only) -->
+    <div class="card-bordered mb-4" style="max-width: 640px; background-color: #f8f9fa;">
+        <h3 class="mb-3">CDR Summary <span
+                style="font-size: 0.85rem; font-weight: normal; color: #6c757d;">(read-only)</span></h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 4px 8px; width: 45%;"><strong>CDR No.</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.cdr_no or '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px;"><strong>Date of CDR</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.cdr_date or '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px;"><strong>Bank</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.bank or '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px;"><strong>CDR Amount</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.cdr_amount or '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px;"><strong>Organization</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.organization or '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px;"><strong>Tender No.</strong></td>
+                <td style="padding: 4px 8px;">{{ cdr.tender_no or '—' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Accounts Info Form -->
+    <form method="POST" style="max-width: 640px;">
+        <div class="card-bordered mb-4">
+            <h3 class="mb-3">Accounts Information</h3>
+            <div class="form-group">
+                <label class="form-label">PV No.</label>
+                <input type="text" name="pv_no" class="form-input" value="{{ cdr.pv_no or '' }}"
+                    placeholder="Payment Voucher number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">PV Date</label>
+                <input type="date" name="pv_date" class="form-input" value="{{ cdr.pv_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <input type="text" name="status" class="form-input" value="{{ cdr.status or '' }}"
+                    placeholder="e.g. Active, Released, Pending">
+            </div>
+        </div>
+
+        <div class="card-bordered mb-4">
+            <h3 class="mb-3">Release Information <span
+                    style="font-size: 0.85rem; font-weight: normal; color: #6c757d;">(can be filled later)</span></h3>
+            <div class="form-group">
+                <label class="form-label">Release Date</label>
+                <input type="date" name="release_date" class="form-input" value="{{ cdr.release_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">RV No.</label>
+                <input type="text" name="rv_no" class="form-input" value="{{ cdr.rv_no or '' }}"
+                    placeholder="Receipt Voucher number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">RV Date</label>
+                <input type="date" name="rv_date" class="form-input" value="{{ cdr.rv_date or '' }}">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primary">Save Accounts Info</button>
+            <a href="{{ url_for(bp ~ '.cdr_accounts_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

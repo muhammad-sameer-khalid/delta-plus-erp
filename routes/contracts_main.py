@@ -24,6 +24,35 @@ def view_all():
     
     return render_template('contracts/view_all.html')
 
+@bp.route('/all-bgs')
+@login_required
+def view_all_bgs():
+    """View all bank guarantees from all lines."""
+    if not can_access_contracts(session.get('user_email')):
+        flash('You do not have permission to access Contracts', 'error')
+        return redirect(url_for('dashboard'))
+    
+    query = """
+        SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 
+               bank_name, bg_number, bg_type, bg_amount, bg_issue_date, bg_expiry_date, 
+               final_crv_no, final_crv_date, 'Tanks' as line 
+        FROM contracts_metadata
+        UNION ALL
+        SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 
+               bank_name, bg_number, bg_type, bg_amount, bg_issue_date, bg_expiry_date, 
+               final_crv_no, final_crv_date, 'Biomedical' as line 
+        FROM contracts_metadata_biomedical
+        UNION ALL
+        SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 
+               bank_name, bg_number, bg_type, bg_amount, bg_issue_date, bg_expiry_date, 
+               final_crv_no, final_crv_date, 'Battery' as line 
+        FROM contracts_metadata_battery
+        ORDER BY contract_no
+    """
+    contracts = execute_query(query, fetch=True) or []
+    
+    return render_template('contracts/display_all_bgs.html', contracts=contracts)
+
 @bp.route('/api/search-all')
 @login_required
 def api_search_all():

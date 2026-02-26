@@ -46,6 +46,7 @@ def create_all_tables():
     create_contracts_metadata_table()
     create_contract_items_table()
     create_contracts_daily_check_table()
+    create_cdr_table()
     
     # Biomedical and Battery production line tables (full replica per line)
     create_line_tables('_biomedical')
@@ -69,6 +70,7 @@ def create_line_tables(suffix):
     create_contracts_metadata_table_suffix(suffix)
     create_contract_items_table_suffix(suffix)
     create_contracts_daily_check_table_suffix(suffix)
+    create_cdr_table_suffix(suffix)
 
 def create_bom_metadata_table_suffix(suffix):
     t = f'bom_metadata{suffix}'
@@ -214,6 +216,8 @@ def create_qc_tables_suffix(suffix):
                 footprint VARCHAR(255),
                 po_no VARCHAR(50),
                 qty INT NOT NULL,
+                good_qty INT DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'Pending',
                 project_number VARCHAR(100),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_po_no (po_no)
@@ -332,14 +336,21 @@ def create_contracts_metadata_table_suffix(suffix):
         contract_type ENUM('manufacturing', 'supply') NOT NULL,
         total_value DECIMAL(15, 2) NOT NULL,
         delivery_deadline DATE NOT NULL,
-        bg_number VARCHAR(100),
+        bg_number VARCHAR(500),
         bg_amount DECIMAL(15, 2),
-        bg_expiry_date DATE,
+        bg_expiry_date VARCHAR(500),
+        bg_issue_date VARCHAR(500),
+        bank_name VARCHAR(255),
+        expected_bg_release_date DATE,
+        remarks TEXT,
+        beneficiary VARCHAR(255),
         bg_type TEXT,
         department TEXT,
         contract_status ENUM('active', 'completed', 'warranty period') DEFAULT 'active',
         amount_given DECIMAL(15, 2) DEFAULT 0,
         amount_balance DECIMAL(15, 2) NOT NULL,
+        final_crv_no VARCHAR(100),
+        final_crv_date VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_contract_no (contract_no),
@@ -473,6 +484,12 @@ def create_demand_notes_table():
         required_date DATE NOT NULL,
         demanded_by VARCHAR(255) NOT NULL,
         approved BOOLEAN DEFAULT FALSE,
+        approval_status VARCHAR(50),
+        approved_by_director VARCHAR(255),
+        director_approved_at TIMESTAMP NULL,
+        approved_by_gm VARCHAR(255),
+        gm_approved_at TIMESTAMP NULL,
+        supply_chain_archived BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_demand_no (demand_no),
@@ -508,15 +525,6 @@ def create_po_metadata_table():
     """Create purchase order metadata table"""
     if table_exists('po_metadata'):
         logger.info("PO metadata table already exists")
-        # Run migration: add currency column if missing
-        result = execute_query(
-            "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS "
-            "WHERE TABLE_NAME='po_metadata' AND COLUMN_NAME='currency'",
-            fetch_one=True
-        )
-        if result and result['cnt'] == 0:
-            execute_query("ALTER TABLE po_metadata ADD COLUMN currency VARCHAR(20) DEFAULT 'RMB'", commit=True)
-            logger.info("Added currency column to po_metadata")
         return
     
     query = """
@@ -550,6 +558,8 @@ def create_qc_tables():
             footprint VARCHAR(255),
             po_no VARCHAR(50),
             qty INT NOT NULL,
+            good_qty INT DEFAULT 0,
+            status VARCHAR(50) DEFAULT 'Pending',
             project_number VARCHAR(100),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_po_no (po_no)
@@ -765,14 +775,21 @@ def create_contracts_metadata_table():
         contract_type ENUM('manufacturing', 'supply') NOT NULL,
         total_value DECIMAL(15, 2) NOT NULL,
         delivery_deadline DATE NOT NULL,
-        bg_number VARCHAR(100),
+        bg_number VARCHAR(500),
         bg_amount DECIMAL(15, 2),
-        bg_expiry_date DATE,
+        bg_expiry_date VARCHAR(500),
+        bg_issue_date VARCHAR(500),
+        bank_name VARCHAR(255),
+        expected_bg_release_date DATE,
+        remarks TEXT,
+        beneficiary VARCHAR(255),
         bg_type TEXT,
         department TEXT,
         contract_status ENUM('active', 'completed', 'warranty period') DEFAULT 'active',
         amount_given DECIMAL(15, 2) DEFAULT 0,
         amount_balance DECIMAL(15, 2) NOT NULL,
+        final_crv_no VARCHAR(100),
+        final_crv_date VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_contract_no (contract_no),
@@ -864,3 +881,68 @@ def initialize_default_admin():
     execute_query(role_query, ('khalid.pk38@gmail.com', 'general manager'), commit=True)
     
     logger.info("Created default admin account: khalid.pk38@gmail.com / deltaplus123 (Role: general manager)")
+
+def create_cdr_table():
+    """CDR (Call Deposit Receipt) table for Tanks production line."""
+    if table_exists('cdr_info'):
+        logger.info("cdr_info table already exists")
+        return
+    query = """
+    CREATE TABLE cdr_info (
+        cdr_id INT AUTO_INCREMENT PRIMARY KEY,
+        cdr_date DATE,
+        cdr_no VARCHAR(100),
+        cdr_ref_no VARCHAR(100),
+        bank VARCHAR(255),
+        cdr_amount DECIMAL(15, 2),
+        organization VARCHAR(255),
+        tender_no VARCHAR(100),
+        tender_submission_date DATE,
+        quoted_item TEXT,
+        cdr_receiving_date DATE,
+        remarks TEXT,
+        pv_no VARCHAR(100),
+        pv_date DATE,
+        status VARCHAR(100),
+        release_date DATE,
+        rv_no VARCHAR(100),
+        rv_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+    """
+    execute_query(query, commit=True)
+    logger.info("Created cdr_info table")
+
+def create_cdr_table_suffix(suffix):
+    """CDR table for Biomedical/Battery production lines."""
+    t = f'cdr_info{suffix}'
+    if table_exists(t):
+        logger.info(f"{t} table already exists")
+        return
+    query = f"""
+    CREATE TABLE {t} (
+        cdr_id INT AUTO_INCREMENT PRIMARY KEY,
+        cdr_date DATE,
+        cdr_no VARCHAR(100),
+        cdr_ref_no VARCHAR(100),
+        bank VARCHAR(255),
+        cdr_amount DECIMAL(15, 2),
+        organization VARCHAR(255),
+        tender_no VARCHAR(100),
+        tender_submission_date DATE,
+        quoted_item TEXT,
+        cdr_receiving_date DATE,
+        remarks TEXT,
+        pv_no VARCHAR(100),
+        pv_date DATE,
+        status VARCHAR(100),
+        release_date DATE,
+        rv_no VARCHAR(100),
+        rv_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+    """
+    execute_query(query, commit=True)
+    logger.info(f"Created {t} table")

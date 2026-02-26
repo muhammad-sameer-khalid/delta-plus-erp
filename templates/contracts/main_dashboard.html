@@ -14,7 +14,8 @@
     <div class="row">
         <!-- Tanks Contracts -->
         <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow-sm module-card" onclick="window.location.href='{{ url_for('contracts_tanks.contracts_dashboard') }}'">
+            <div class="card h-100 shadow-sm module-card"
+                onclick="window.location.href='{{ url_for('contracts_tanks.contracts_dashboard') }}'">
                 <div class="card-body text-center">
                     <i class="fas fa-industry fa-3x mb-3 text-primary"></i>
                     <h4>Tanks</h4>
@@ -25,7 +26,8 @@
 
         <!-- Biomedical Contracts -->
         <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow-sm module-card" onclick="window.location.href='{{ url_for('contracts_biomedical.contracts_dashboard') }}'">
+            <div class="card h-100 shadow-sm module-card"
+                onclick="window.location.href='{{ url_for('contracts_biomedical.contracts_dashboard') }}'">
                 <div class="card-body text-center">
                     <i class="fas fa-heartbeat fa-3x mb-3 text-success"></i>
                     <h4>Biomedical</h4>
@@ -36,7 +38,8 @@
 
         <!-- Battery Contracts -->
         <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow-sm module-card" onclick="window.location.href='{{ url_for('contracts_battery.contracts_dashboard') }}'">
+            <div class="card h-100 shadow-sm module-card"
+                onclick="window.location.href='{{ url_for('contracts_battery.contracts_dashboard') }}'">
                 <div class="card-body text-center">
                     <i class="fas fa-car-battery fa-3x mb-3 text-warning"></i>
                     <h4>Battery</h4>
@@ -47,11 +50,24 @@
 
         <!-- View All Contracts -->
         <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow-sm module-card" onclick="window.location.href='{{ url_for('contracts_main.view_all') }}'">
+            <div class="card h-100 shadow-sm module-card"
+                onclick="window.location.href='{{ url_for('contracts_main.view_all') }}'">
                 <div class="card-body text-center">
                     <i class="fas fa-search fa-3x mb-3 text-info"></i>
                     <h4>View All Contracts</h4>
                     <p class="text-muted">Search across all departments</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- View All Bank Guarantees -->
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 shadow-sm module-card"
+                onclick="window.location.href='{{ url_for('contracts_main.view_all_bgs') }}'">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice-dollar fa-3x mb-3 text-secondary"></i>
+                    <h4>View All Bank Guarantees</h4>
+                    <p class="text-muted">View all BGs across all departments</p>
                 </div>
             </div>
         </div>
@@ -63,6 +79,7 @@
         transition: transform 0.2s, box-shadow 0.2s;
         cursor: pointer;
     }
+
     .module-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;

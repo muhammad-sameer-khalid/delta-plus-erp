@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Edit Item — {{ contract.contract_no }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Edit Item — {{ contract.contract_no }} ({{ line|capitalize }})</h1>
+    <p class="mb-4">Update item details. Total price will be recalculated automatically.</p>
+    <div class="mt-4">
+        <a href="{{ url_for(bp ~ '.edit_contract_items_select', contract_id=contract.contract_id) }}"
+            class="btn btn-secondary mb-3">← Back to Item Search</a>
+    </div>
+
+    <form method="POST"
+        action="{{ url_for(bp ~ '.edit_contract_item', contract_id=contract.contract_id, item_id=item.item_id) }}"
+        class="mt-4" style="max-width: 480px;" id="editItemForm">
+        <div class="form-group">
+            <label for="item_name" class="form-label required">Item Name</label>
+            <input type="text" id="item_name" name="item_name" class="form-input" required value="{{ item.item_name }}">
+        </div>
+        <div class="form-group">
+            <label for="part_number" class="form-label">Part Number</label>
+            <input type="text" id="part_number" name="part_number" class="form-input"
+                value="{{ item.part_number or '' }}" placeholder="Optional">
+        </div>
+        <div class="form-group">
+            <label for="qty" class="form-label required">Quantity</label>
+            <input type="number" id="qty" name="qty" class="form-input" required min="1" step="1"
+                value="{{ item.qty }}">
+        </div>
+        <div class="form-group">
+            <label for="unit_price" class="form-label required">Unit Price (Rs.)</label>
+            <input type="number" id="unit_price" name="unit_price" class="form-input" required min="0" step="0.01"
+                value="{{ item.unit_price }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Total Price (Rs.)</label>
+            <input type="text" id="total_price_display" class="form-input" value="{{ '%.2f'|format(item.total_price) }}"
+                readonly style="background:#f5f5f5; color:#666; cursor:not-allowed;">
+        </div>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for(bp ~ '.edit_contract_items_select', contract_id=contract.contract_id) }}"
+                class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        const qtyInput = document.getElementById('qty');
+        const unitPriceInput = document.getElementById('unit_price');
+        const totalDisplay = document.getElementById('total_price_display');
+
+        function updateTotal() {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(unitPriceInput.value) || 0;
+            totalDisplay.value = (qty * price).toFixed(2);
+        }
+
+        qtyInput.addEventListener('input', updateTotal);
+        unitPriceInput.addEventListener('input', updateTotal);
+    })();
+</script>
+{% endblock %}

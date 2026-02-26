@@ -1,51 +1,138 @@
 {% extends "base.html" %}
 {% block title %}Contracts ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
 {% block content %}
+{# Role flags #}
+{% set is_admin = 'director' in user_roles or 'gm logistics' in user_roles or 'general manager' in user_roles or
+'general manager_biomedical' in user_roles or 'general manager_battery' in user_roles or 'contracts_data_entry' in
+user_roles %}
+{% set is_bg = 'data_entry_bg' in user_roles %}
+{% set is_accounts = 'data_entry_accounts' in user_roles %}
+{% set is_hr = 'hr_manager' in user_roles %}
+
 <div class="container">
     <h1>Contracts ({{ line|capitalize }})</h1>
     <p class="mb-4">Manage contracts, inspection, delivery, CRV, and payment info.</p>
 
     <div class="mt-4" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+
+        {% if is_admin or is_bg %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_contract') }}'"
             style="cursor: pointer;">
             <h4>1. Input a contract</h4>
-            <p>Create new contract and add items</p>
+            <p>Create new contract (metadata only)</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_accounts %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_items_list') }}'"
+            style="cursor: pointer;">
+            <h4>2. Input items for a contract</h4>
+            <p>Add or manage items for an existing contract</p>
         </div>
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_inspection_list') }}'"
             style="cursor: pointer;">
-            <h4>2. Input inspection info</h4>
+            <h4>3. Input inspection info</h4>
             <p>Inspection note no. and date per item</p>
         </div>
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_delivery_list') }}'"
             style="cursor: pointer;">
-            <h4>3. Input delivery info</h4>
+            <h4>4. Input delivery info</h4>
             <p>Delivered amount, delivery no. and date</p>
         </div>
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_crv_list') }}'"
             style="cursor: pointer;">
-            <h4>4. Input CRV info</h4>
+            <h4>5. Input CRV info</h4>
             <p>CRV no. and date per item</p>
         </div>
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_invoice_list') }}'"
             style="cursor: pointer;">
-            <h4>5. Input Invoice Info</h4>
+            <h4>6. Input Invoice Info</h4>
             <p>Invoice no. and submission date</p>
         </div>
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_payment_list') }}'"
             style="cursor: pointer;">
-            <h4>6. Input Payment Info</h4>
+            <h4>7. Input Payment Info</h4>
             <p>Payment details, taxes, charges</p>
         </div>
+        {% endif %}
+
+        {% if is_admin or is_bg or is_accounts or is_hr %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_contract_list') }}'"
             style="cursor: pointer;">
-            <h4>7. Display contracts</h4>
+            <h4>8. Display contracts</h4>
             <p>View all contracts and details</p>
         </div>
+        {% endif %}
+
+        {% if is_admin or is_bg %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.renew_bg_list') }}'"
             style="cursor: pointer;">
-            <h4>8. Renew BG</h4>
+            <h4>9. Renew BG</h4>
             <p>Update Bank Guarantee details</p>
         </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.edit_contract_list') }}'"
+            style="cursor: pointer;">
+            <h4>10. Edit a contract</h4>
+            <p>Edit contract metadata and details</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_accounts %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.edit_contract_items_list') }}'"
+            style="cursor: pointer;">
+            <h4>11. Edit contract items</h4>
+            <p>Edit name, part no., qty, or price for a contract item</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_bg %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.final_crv_list') }}'"
+            style="cursor: pointer;">
+            <h4>12. Enter final CRV info</h4>
+            <p>Record final CRV number and date for a contract</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_bg or is_hr %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_bg') }}'"
+            style="cursor: pointer;">
+            <h4>13. Display BG</h4>
+            <p>View and print Bank Guarantee info for all contracts</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_bg %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_cdr') }}'"
+            style="cursor: pointer;">
+            <h4>14. Input CDR Info</h4>
+            <p>Record a new Call Deposit Receipt</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_bg or is_accounts or is_hr %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_cdr') }}'"
+            style="cursor: pointer;">
+            <h4>15. Display CDR</h4>
+            <p>View all Call Deposit Receipts</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_bg or is_accounts %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.edit_cdr_list') }}'"
+            style="cursor: pointer;">
+            <h4>16. Edit CDR</h4>
+            <p>Search and edit an existing CDR record</p>
+        </div>
+        {% endif %}
+
+        {% if is_admin or is_accounts %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.cdr_accounts_list') }}'"
+            style="cursor: pointer;">
+            <h4>17. Input CDR Accounts Info</h4>
+            <p>Enter PV, status, release date and RV info for a CDR</p>
+        </div>
+        {% endif %}
+
     </div>
     <div class="mt-4"><a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary">← Back to
             Contracts</a></div>

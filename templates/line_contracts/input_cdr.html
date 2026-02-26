@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Input CDR Info – {{ line|capitalize }} – Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+        <div>
+            <h1 class="mb-0">Input CDR Info – {{ line|capitalize }}</h1>
+            <p class="text-muted mb-0">Enter Call Deposit Receipt details below.</p>
+        </div>
+        <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <form method="POST" style="max-width: 640px;">
+        <div class="card-bordered mb-4">
+            <h3 class="mb-3">CDR Details</h3>
+            <div class="form-group">
+                <label class="form-label">Date of CDR</label>
+                <input type="date" name="cdr_date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR No.</label>
+                <input type="text" name="cdr_no" class="form-input" placeholder="CDR number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Reference No.</label>
+                <input type="text" name="cdr_ref_no" class="form-input" placeholder="CDR reference number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Bank</label>
+                <input type="text" name="bank" class="form-input" placeholder="Bank name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Amount</label>
+                <input type="number" name="cdr_amount" class="form-input" step="0.01" placeholder="Amount">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Organization</label>
+                <input type="text" name="organization" class="form-input" placeholder="Organization name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tender No.</label>
+                <input type="text" name="tender_no" class="form-input" placeholder="Tender number">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tender Submission Date</label>
+                <input type="date" name="tender_submission_date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Quoted Item</label>
+                <textarea name="quoted_item" class="form-input" rows="2"
+                    placeholder="Quoted item description"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Receiving Date</label>
+                <input type="date" name="cdr_receiving_date" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Remarks</label>
+                <textarea name="remarks" class="form-input" rows="2" placeholder="Any remarks"></textarea>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primary">Save CDR</button>
+            <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

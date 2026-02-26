@@ -50,15 +50,15 @@
                             <td>{{ comp.part_value }}</td>
                             <td>{{ comp.part_description }}</td>
                             <td>{{ comp.qty }}</td>
-                            <td style="text-align: right;">{{ "%.2f"|format(comp.unit_price) }}</td>
-                            <td style="text-align: right;">{{ "%.2f"|format(comp.total_price) }}</td>
+                            <td style="text-align: right;">{{ comp.unit_price|commas }}</td>
+                            <td style="text-align: right;">{{ comp.total_price|commas }}</td>
                             <td>{{ comp.project }}</td>
                         </tr>
                         {% endfor %}
                         <tr style="background: #f0f0f0; font-weight: bold;">
                             <td colspan="5" style="text-align: right;">Subtotal for Demand #{{ demand_no }}:</td>
                             <td style="text-align: right;">{{ currency }} {{
-                                "%.2f"|format(components|sum(attribute='total_price')) }}</td>
+                                (components|sum(attribute='total_price'))|commas }}</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -95,15 +95,15 @@
                             <td>{{ comp.part_description }}</td>
                             <td>{{ comp.footprint }}</td>
                             <td><strong>{{ comp.qty }}</strong></td>
-                            <td style="text-align: right;">{{ "%.2f"|format(comp.unit_price) }}</td>
-                            <td style="text-align: right;"><strong>{{ "%.2f"|format(comp.total_price) }}</strong></td>
+                            <td style="text-align: right;">{{ comp.unit_price|commas }}</td>
+                            <td style="text-align: right;"><strong>{{ comp.total_price|commas }}</strong></td>
                             <td>{{ comp.project }}</td>
                         </tr>
                         {% endfor %}
                         <tr style="border-top: 3px solid var(--primary-color); background: #f0f0f0;">
                             <td colspan="6" style="text-align: right;"><strong>Grand Total:</strong></td>
                             <td style="text-align: right;"><strong>{{ currency }} {{
-                                    "%.2f"|format(deduplicated_components|sum(attribute='total_price')) }}</strong></td>
+                                    (deduplicated_components|sum(attribute='total_price'))|commas }}</strong></td>
                             <td></td>
                         </tr>
                     </tbody>

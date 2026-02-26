@@ -15,7 +15,7 @@ def _get_accessible_modules():
 
 
 def _search_store_items(q, limit=20):
-    """Search part_type, part_value, part_description across all store_* tables. Returns list with category, id, part_*, qty."""
+    """Search part_type, part_value, part_description across all store_* tables. Returns list with category, id, part_*, qty, section."""
     q = (q or '').strip().lower()
     if not q or len(q) < 1:
         return []
@@ -25,7 +25,7 @@ def _search_store_items(q, limit=20):
         if not table_exists(table):
             continue
         sql = f"""
-            SELECT id, part_type, part_value, part_description, footprint, qty
+            SELECT id, part_type, part_value, part_description, footprint, qty, section
             FROM {table}
             WHERE LOWER(COALESCE(part_type,'')) LIKE %s
                OR LOWER(COALESCE(part_value,'')) LIKE %s
@@ -158,25 +158,28 @@ def add_to_store(item_id):
                                 fetch_one=True)
         
         if existing:
-            # Item exists - merge by updating quantity and appending PO number
+            # Item exists - merge qty, append section if different, append PO if different
             new_qty = existing['qty'] + item['qty']
-            
-            # Append PO number if not already present
+
             existing_po_nos = existing.get('po_no', '') or ''
             new_po = item.get('po_no', '') or ''
-            
             if new_po and new_po not in existing_po_nos:
                 updated_po_nos = f"{existing_po_nos}, {new_po}" if existing_po_nos else new_po
             else:
                 updated_po_nos = existing_po_nos
-            
-            # Update existing item
-            update_query = f"""
-                UPDATE {table_name} 
-                SET qty = %s, po_no = %s
-                WHERE id = %s
-            """
-            execute_query(update_query, (new_qty, updated_po_nos, existing['id']), commit=True)
+
+            existing_section = existing.get('section', '') or ''
+            new_section = section or ''
+            if new_section and new_section not in existing_section:
+                updated_section = f"{existing_section}, {new_section}" if existing_section else new_section
+            else:
+                updated_section = existing_section
+
+            execute_query(
+                f"UPDATE {table_name} SET qty = %s, po_no = %s, section = %s WHERE id = %s",
+                (new_qty, updated_po_nos, updated_section, existing['id']),
+                commit=True
+            )
             flash(f'Item merged with existing inventory. New quantity: {new_qty}', 'success')
         else:
             # Item doesn't exist - insert new
@@ -712,7 +715,7 @@ def manual_entry_submit():
 
     # Merge qty if identical item already exists
     check_q = f"""
-        SELECT id, qty, po_no FROM {table}
+        SELECT id, qty, po_no, section FROM {table}
         WHERE COALESCE(part_type,'') = COALESCE(%s,'')
           AND COALESCE(part_value,'') = COALESCE(%s,'')
           AND COALESCE(part_description,'') = COALESCE(%s,'')
@@ -725,9 +728,11 @@ def manual_entry_submit():
         new_qty = existing['qty'] + qty
         existing_po = existing.get('po_no') or ''
         updated_po = f"{existing_po}, {po_no}" if (po_no and po_no not in existing_po and existing_po) else (po_no if po_no else existing_po)
+        existing_sec = existing.get('section') or ''
+        updated_sec = f"{existing_sec}, {section}" if (section and section not in existing_sec and existing_sec) else (section if section else existing_sec)
         execute_query(
-            f"UPDATE {table} SET qty = %s, po_no = %s WHERE id = %s",
-            (new_qty, updated_po, existing['id']),
+            f"UPDATE {table} SET qty = %s, po_no = %s, section = %s WHERE id = %s",
+            (new_qty, updated_po, updated_sec, existing['id']),
             commit=True
         )
         flash(f'Item merged with existing inventory. New quantity: {new_qty}', 'success')

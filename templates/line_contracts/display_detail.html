@@ -22,19 +22,27 @@
             </tr>
             <tr>
                 <td><strong>Total Value (Rs.)</strong></td>
-                <td>{{ contract.total_value }}</td>
+                <td>{{ contract.total_value|commas }}</td>
             </tr>
             <tr>
                 <td><strong>Delivery Deadline</strong></td>
                 <td>{{ contract.delivery_deadline or '-' }}</td>
             </tr>
             <tr>
-                <td><strong>BG Number</strong></td>
-                <td>{{ contract.bg_number or '-' }}</td>
-            </tr>
-            <tr>
                 <td><strong>Department</strong></td>
                 <td>{{ contract.department or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Beneficiary</strong></td>
+                <td>{{ contract.beneficiary or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Bank Name</strong></td>
+                <td>{{ contract.bank_name or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Number</strong></td>
+                <td>{{ contract.bg_number or '-' }}</td>
             </tr>
             <tr>
                 <td><strong>BG Type</strong></td>
@@ -42,11 +50,19 @@
             </tr>
             <tr>
                 <td><strong>BG Amount</strong></td>
-                <td>{{ contract.bg_amount or '-' }}</td>
+                <td>{{ contract.bg_amount|commas if contract.bg_amount else '-' }}</td>
             </tr>
             <tr>
                 <td><strong>BG Expiry Date</strong></td>
                 <td>{{ contract.bg_expiry_date or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>BG Issue Date</strong></td>
+                <td>{{ contract.bg_issue_date or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Expected BG Release Date</strong></td>
+                <td>{{ contract.expected_bg_release_date or '-' }}</td>
             </tr>
             <tr>
                 <td><strong>Status</strong></td>
@@ -54,11 +70,25 @@
             </tr>
             <tr>
                 <td><strong>Amount Given</strong></td>
-                <td>{{ contract.amount_given or 0 }}</td>
+                <td>{{ contract.amount_given|commas }}</td>
             </tr>
             <tr>
                 <td><strong>Amount Balance</strong></td>
-                <td>{{ contract.amount_balance or 0 }}</td>
+                <td>{{ contract.amount_balance|commas }}</td>
+            </tr>
+            {% if contract.remarks %}
+            <tr>
+                <td><strong>Remarks</strong></td>
+                <td>{{ contract.remarks }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><strong>Final CRV No.</strong></td>
+                <td>{{ contract.final_crv_no or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Final CRV Date</strong></td>
+                <td>{{ contract.final_crv_date or '-' }}</td>
             </tr>
         </table>
     </div>
@@ -91,8 +121,8 @@
                     <td>{{ i.item_name or '-' }}</td>
                     <td>{{ i.part_number or '-' }}</td>
                     <td>{{ i.qty }}</td>
-                    <td>{{ i.unit_price }}</td>
-                    <td>{{ i.total_price }}</td>
+                    <td>{{ i.unit_price|commas }}</td>
+                    <td>{{ i.total_price|commas }}</td>
                     <td>{{ i.delivered_qty or 0 }}</td>
                     <td>{{ i.deliver_balance or 0 }}</td>
                     <td>

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Edit CDR {{ cdr.cdr_no }} – {{ line|capitalize }} – Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+        <div>
+            <h1 class="mb-0">Edit CDR – {{ line|capitalize }}</h1>
+            <p class="text-muted mb-0">Edit CDR record details below. Leave any field unchanged to keep its current
+                value.</p>
+        </div>
+        <a href="{{ url_for(bp ~ '.edit_cdr_list') }}" class="btn btn-secondary">← Back to CDR List</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">{{ message }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <form method="POST" style="max-width: 640px;">
+        <div class="card-bordered mb-4">
+            <h3 class="mb-3">CDR Details</h3>
+            <div class="form-group">
+                <label class="form-label">Date of CDR</label>
+                <input type="date" name="cdr_date" class="form-input" value="{{ cdr.cdr_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR No.</label>
+                <input type="text" name="cdr_no" class="form-input" value="{{ cdr.cdr_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Reference No.</label>
+                <input type="text" name="cdr_ref_no" class="form-input" value="{{ cdr.cdr_ref_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Bank</label>
+                <input type="text" name="bank" class="form-input" value="{{ cdr.bank or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Amount</label>
+                <input type="number" name="cdr_amount" class="form-input" step="0.01"
+                    value="{{ cdr.cdr_amount or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Organization</label>
+                <input type="text" name="organization" class="form-input" value="{{ cdr.organization or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tender No.</label>
+                <input type="text" name="tender_no" class="form-input" value="{{ cdr.tender_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tender Submission Date</label>
+                <input type="date" name="tender_submission_date" class="form-input"
+                    value="{{ cdr.tender_submission_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Quoted Item</label>
+                <textarea name="quoted_item" class="form-input" rows="2">{{ cdr.quoted_item or '' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">CDR Receiving Date</label>
+                <input type="date" name="cdr_receiving_date" class="form-input"
+                    value="{{ cdr.cdr_receiving_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Remarks</label>
+                <textarea name="remarks" class="form-input" rows="2">{{ cdr.remarks or '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="card-bordered mb-4">
+            <h3 class="mb-3">Additional Info</h3>
+            <div class="form-group">
+                <label class="form-label">PV No.</label>
+                <input type="text" name="pv_no" class="form-input" value="{{ cdr.pv_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">PV Date</label>
+                <input type="date" name="pv_date" class="form-input" value="{{ cdr.pv_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <input type="text" name="status" class="form-input" value="{{ cdr.status or '' }}"
+                    placeholder="e.g. Active, Released">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Release Date</label>
+                <input type="date" name="release_date" class="form-input" value="{{ cdr.release_date or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">RV No.</label>
+                <input type="text" name="rv_no" class="form-input" value="{{ cdr.rv_no or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">RV Date</label>
+                <input type="date" name="rv_date" class="form-input" value="{{ cdr.rv_date or '' }}">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for(bp ~ '.edit_cdr_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -236,3 +236,72 @@ Change this password after first login (Admin panel).
 ---
 
 **Summary:** Install **Python** and **MySQL** (Part 1), copy the project (Part 2), run the one-time setup (Part 3), then the client can run the app by **double‑clicking `start_erp.bat`** or a shortcut to it (Part 4).
+
+---
+
+## Part 7: Syncing Data from the Live Server (Offline Copy)
+
+If the client wants a **local offline copy** that mirrors the live server's database, follow these steps.
+
+> ⚠️ **Important:** The local copy is a **one-way read-only snapshot**. Any data entered locally while offline will be **overwritten** the next time you sync. Always enter new data on the live server.
+
+---
+
+### How to Sync
+
+**On the live server (done by an admin):**
+
+1. Open a browser and go to the **live ERP** server URL (e.g. `http://192.168.1.10:5000`)
+2. Log in with a **director**, **general manager**, or **gm logistics** account
+3. Go to **Admin Panel** (top navigation)
+4. Scroll to the bottom and click **⬇ Sync Database**
+5. Confirm the prompt — the browser will download a file named like:  
+   `delta_plus_erp_backup_20260226_192341.sql`
+6. Transfer this file to the client's local PC (USB drive, shared folder, email, etc.)
+
+---
+
+**On the client's local PC:**
+
+1. Place the downloaded `.sql` file inside the project folder  
+   (same folder as `restore_local.bat`, e.g. `C:\DeltaPlusERP\`)
+2. **Double-click `restore_local.bat`**
+3. Type `YES` when prompted and press Enter
+4. Enter the **local MySQL root password** when asked  
+   (the same password you set during MySQL installation)
+5. Wait for the **SUCCESS** message
+
+The local database is now an exact copy of what was on the live server at the time of the sync.
+
+---
+
+**After restoring, start the local server:**
+
+Double-click **`start_erp.bat`** and open `http://localhost:5000` in a browser.  
+Log in with the same credentials as the live server.
+
+---
+
+### Quick Reference — Sync Workflow
+
+| Step | Who | What |
+|---|---|---|
+| 1. Download backup | Admin (on live server) | Admin Panel → ⬇ Sync Database |
+| 2. Transfer file | Admin | Copy `.sql` file to client PC (USB / shared folder) |
+| 3. Restore locally | Client | Place `.sql` in project folder → run `restore_local.bat` |
+| 4. Start local app | Client | Double-click `start_erp.bat` → open `http://localhost:5000` |
+
+---
+
+### Troubleshooting Restore
+
+**"No .sql backup file found"**  
+→ Make sure the downloaded `.sql` file is in the **same folder** as `restore_local.bat`.
+
+**"Could not connect to MySQL"**  
+→ Make sure MySQL is running (check **Services** → **MySQL80** → Running).  
+→ Check that the password you typed matches your local MySQL root password.
+
+**"`mysqldump` not found" error on the server when clicking Sync Database**  
+→ MySQL's `bin` folder is not in the system PATH on the server PC.  
+→ Fix: Search for `mysqldump.exe` on the server (usually in `C:\Program Files\MySQL\MySQL Server 8.0\bin`), then add that folder to the system PATH via **System Properties → Advanced → Environment Variables**.

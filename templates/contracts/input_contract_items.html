@@ -54,16 +54,47 @@
         var count = container.querySelectorAll('.item-row').length;
         if (count === 0) count = 1;
 
+        function renumberRows() {
+            var rows = container.querySelectorAll('.item-row');
+            count = rows.length;
+            rows.forEach(function (row, index) {
+                // Update header
+                var header = row.querySelector('h4');
+                if (header) header.innerText = 'Item ' + (index + 1);
+
+                // Update input names
+                var inputs = row.querySelectorAll('input');
+                inputs.forEach(function (input) {
+                    var name = input.name;
+                    if (name) {
+                        // Extract base name (item_name, part_number, etc)
+                        var base = name.substring(0, name.lastIndexOf('_'));
+                        if (base) {
+                            input.name = base + '_' + index;
+                        }
+                    }
+                });
+            });
+        }
+
         document.getElementById('btnAddItem').onclick = function () {
             var row = document.createElement('div');
             row.className = 'item-row mt-3 p-3';
             row.style.border = '1px solid #ddd';
             row.style.borderRadius = '8px';
-            row.innerHTML = '<h4 class="mb-2">Item ' + (count + 1) + '</h4>' +
+            row.style.position = 'relative';
+            row.innerHTML = '<button type="button" class="btn btn-danger btn-sm" style="position: absolute; top: 15px; right: 15px;">Remove</button>' +
+                '<h4 class="mb-2">Item ' + (count + 1) + '</h4>' +
                 '<div class="form-group"><label class="form-label required">Item name</label><input type="text" name="item_name_' + count + '" class="form-input" required></div>' +
                 '<div class="form-group"><label class="form-label">Part number</label><input type="text" name="part_number_' + count + '" class="form-input"></div>' +
                 '<div class="form-group"><label class="form-label required">Qty</label><input type="number" name="qty_' + count + '" class="form-input qty-inp" min="1" required placeholder="0"></div>' +
                 '<div class="form-group"><label class="form-label required">Unit price</label><input type="number" name="unit_price_' + count + '" class="form-input unit-price-inp" step="0.01" min="0" required placeholder="0.00"></div>';
+
+            row.querySelector('.btn-danger').onclick = function () {
+                row.remove();
+                renumberRows();
+            };
+
             container.appendChild(row);
             count++;
         };

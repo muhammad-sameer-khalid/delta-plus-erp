@@ -1,0 +1,90 @@
+﻿{% extends "base.html" %}
+{% block title %}Select Item to Edit ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Select Item — {{ contract.contract_no }} ({{ line|capitalize }})</h1>
+    <p class="mb-4">Search for an item to edit from this contract.</p>
+
+    <div class="mt-4">
+        <a href="{{ url_for(bp ~ '.edit_contract_items_list') }}" class="btn btn-secondary mb-3">← Back to Contract Search</a>
+    </div>
+
+    <div class="form-group" style="max-width: 400px;">
+        <label class="form-label">Search by item name or part number</label>
+        <input type="text" id="searchItemInput" class="form-input" placeholder="Type to search..." autocomplete="off">
+    </div>
+
+    <div id="itemsTableContainer" class="table-container mt-4" style="display: {{ 'block' if items else 'none' }};">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Part Number</th>
+                    <th>Qty</th>
+                    <th>Unit Price (Rs.)</th>
+                    <th>Total Price (Rs.)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.part_number or '—' }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ item.unit_price|commas }}</td>
+                    <td>{{ item.total_price|commas }}</td>
+                    <td>
+                        <a href="{{ url_for(bp ~ '.edit_contract_item', contract_id=contract.contract_id, item_id=item.item_id) }}" class="btn btn-primary">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="noItemsMsg" class="mt-4" style="color: #666; display: {{ 'none' if items else 'block' }};">
+        <p>No items found for this contract.</p>
+    </div>
+</div>
+<script>
+(function () {
+    var searchInput = document.getElementById('searchItemInput');
+    var tableContainer = document.getElementById('itemsTableContainer');
+    var tableBody = document.getElementById('itemsTableBody');
+    var noMsg = document.getElementById('noItemsMsg');
+    var contractId = {{ contract.contract_id }};
+    var editBase = "{{ url_for(bp ~ '.edit_contract_item', contract_id=contract.contract_id, item_id=0) }}".replace(/\/0$/, "/");
+    var searchTimeout = null;
+
+    function formatNumber(num) {
+        if (num === null || num === undefined || num === '') return '0.00';
+        return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    }
+
+    function renderTable(items) {
+        if (!items || items.length === 0) {
+            tableContainer.style.display = 'none';
+            noMsg.style.display = 'block';
+            return;
+        }
+        tableContainer.style.display = 'block';
+        noMsg.style.display = 'none';
+        tableBody.innerHTML = items.map(function(item) {
+            return '<tr><td>' + (item.item_name||'') + '</td><td>' + (item.part_number||'&—;') + '</td><td>' + (item.qty||0) + '</td><td>' + formatNumber(item.unit_price) + '</td><td>' + formatNumber(item.total_price) + '</td><td><a href="' + editBase + item.item_id + '" class="btn btn-primary">Edit</a></td></tr>';
+        }).join('');
+    }
+
+    searchInput.addEventListener('input', function () {
+        var q = this.value.trim();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function () {
+            fetch("{{ url_for(bp ~ '.api_search_contract_items', contract_id=contract.contract_id) }}" + '?q=' + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) { renderTable(data.items); })
+                .catch(function(err) { console.error('Search failed', err); });
+        }, 300);
+    });
+})();
+</script>
+{% endblock %}

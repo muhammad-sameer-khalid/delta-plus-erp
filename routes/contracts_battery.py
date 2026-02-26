@@ -94,7 +94,9 @@ def api_search_contract_items(contract_id):
 @_contracts_access_required
 def contracts_dashboard():
     """Contracts dashboard with 6 cards."""
-    return render_template(TP + 'dashboard.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+    from auth import get_user_roles
+    user_roles = get_user_roles(session.get('user_email', ''))
+    return render_template(TP + 'dashboard.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
 
 
 # ========== 1. Input a contract ==========
@@ -112,34 +114,49 @@ def input_contract():
         except Exception:
             total_value = 0
         delivery_deadline = request.form.get('delivery_deadline', '').strip()
-        bg_number = (request.form.get('bg_number') or '').strip()
+        
+        # New base fields
+        department = (request.form.get('department') or '').strip()
+        beneficiary = (request.form.get('beneficiary') or '').strip()
+        bank_name = (request.form.get('bank_name') or '').strip()
+        expected_bg_release_date = request.form.get('expected_bg_release_date', '').strip() or None
+        remarks = (request.form.get('remarks') or '').strip() or None
+
+        # BG fields
+        bg_number = (request.form.get('bg_number') or '').strip() or None
+        bg_issue_date = (request.form.get('bg_issue_date') or '').strip() or None
         try:
             bg_amount = float(request.form.get('bg_amount') or 0)
         except Exception:
             bg_amount = 0
         bg_expiry_date = (request.form.get('bg_expiry_date') or '').strip() or None
+        
+        # CDR fields
+        cdr_no = (request.form.get('cdr_no') or '').strip() or None
 
-        bg_type_list = request.form.getlist('bg_type')
-        bg_type = ', '.join(bg_type_list) if bg_type_list else None
-        department = (request.form.get('department') or '').strip()
+        # Build bg_type from radio selection + optional cash margin %
+        bg_type_radio = (request.form.get('bg_type_radio') or '').strip()
+        if bg_type_radio == 'Cash Margin':
+            try:
+                pct = float(request.form.get('cash_margin_pct') or 0)
+            except Exception:
+                pct = 0
+            bg_type = f'Cash Margin {pct:.4g}%' if pct > 0 else 'Cash Margin'
+        else:
+            bg_type = bg_type_radio or None
 
-        if not contract_no or not contract_date or not delivery_deadline:
-            flash('Contract No., Contract Date and Delivery Deadline are required', 'error')
+        # Validation
+        if not contract_no or not contract_date or not delivery_deadline or not department or not beneficiary or not bank_name or not expected_bg_release_date:
+            flash('All required fields marked with * must be filled.', 'error')
             return redirect(url_for(f'{BP}.input_contract'))
-        if not bg_number:
-            flash('BG Number is required', 'error')
-            return redirect(url_for(f'{BP}.input_contract'))
+        
         if total_value <= 0:
             flash('Total Value must be greater than 0', 'error')
             return redirect(url_for(f'{BP}.input_contract'))
-        if not bg_expiry_date:
-            flash('BG Expiry Date is required', 'error')
-            return redirect(url_for(f'{BP}.input_contract'))
-        if bg_amount <= 0:
-            flash('BG Amount must be greater than 0', 'error')
-            return redirect(url_for(f'{BP}.input_contract'))
-        if not department:
-            flash('Department is required', 'error')
+
+        # BG vs CDR validation
+        if not bg_number:
+            flash('BG/CDR Number must be provided.', 'error')
             return redirect(url_for(f'{BP}.input_contract'))
 
         existing = execute_query(f"SELECT 1 FROM {_cm()} WHERE contract_no = %s", (contract_no,), fetch_one=True)
@@ -147,103 +164,22 @@ def input_contract():
             flash(f'Contract number "{contract_no}" already exists', 'error')
             return redirect(url_for(f'{BP}.input_contract'))
 
-        # Do not save to DB yet; store in session until user adds items and clicks Save
-        session[SESSION_KEY] = {
-            'contract_no': contract_no,
-            'contract_date': contract_date,
-            'contract_type': contract_type,
-            'total_value': total_value,
-            'delivery_deadline': delivery_deadline,
-            'bg_number': bg_number,
-            'bg_amount': bg_amount,
-            'bg_expiry_date': bg_expiry_date,
-            'bg_type': bg_type,
-            'department': department,
-        }
-        flash('Enter items below, then click Save to save the contract and all items.', 'success')
-        return redirect(url_for(f'{BP}.input_contract_items_new'))
-
-    return render_template(TP + 'input_contract.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
-
-
-@bp.route('/input-contract-items', methods=['GET', 'POST'])
-@_contracts_access_required
-def input_contract_items_new():
-    """Add items for a new contract (metadata in session). Contract is saved only when user clicks Save here."""
-    pending = session.get(SESSION_KEY)
-    if not pending:
-        flash('Please enter contract details first.', 'error')
-        return redirect(url_for(f'{BP}.input_contract'))
-
-    if request.method == 'POST':
-        # Validate items and collect them
-        i = 0
-        items_data = []
-        while request.form.get(f'item_name_{i}') is not None:
-            item_name = (request.form.get(f'item_name_{i}') or '').strip()
-            part_number = (request.form.get(f'part_number_{i}') or '').strip() or None
-            try:
-                qty = int(request.form.get(f'qty_{i}') or 0)
-            except Exception:
-                qty = 0
-            try:
-                unit_price = float(request.form.get(f'unit_price_{i}') or 0)
-            except Exception:
-                unit_price = 0
-            if not item_name and not part_number and qty == 0 and unit_price == 0:
-                i += 1
-                continue
-            if not item_name:
-                flash('Item name is required for every item', 'error')
-                return redirect(url_for(f'{BP}.input_contract_items_new'))
-            if qty <= 0:
-                flash('Qty must be greater than 0 for every item', 'error')
-                return redirect(url_for(f'{BP}.input_contract_items_new'))
-            if unit_price < 0:
-                flash('Unit price cannot be negative', 'error')
-                return redirect(url_for(f'{BP}.input_contract_items_new'))
-            total_price = round(qty * unit_price, 2)
-            items_data.append((item_name, part_number, qty, unit_price, total_price, qty))
-            i += 1
-
-        if not items_data:
-            flash('At least one item is required with all fields (Item name, Part number, Qty, Unit price) filled.', 'error')
-            return redirect(url_for(f'{BP}.input_contract_items_new'))
-
-        # Save contract and items together
-        contract_no = pending['contract_no']
-        contract_date = pending['contract_date']
-        contract_type = pending['contract_type']
-        total_value = pending['total_value']
-        delivery_deadline = pending['delivery_deadline']
-        bg_number = pending['bg_number']
-        bg_amount = pending['bg_amount']
-        bg_expiry_date = pending['bg_expiry_date']
-        bg_type = pending.get('bg_type')
-        department = pending.get('department')
-
+        # Save directly to DB
         execute_query(f"""
             INSERT INTO {_cm()}
-            (contract_no, contract_date, contract_type, total_value, delivery_deadline, bg_number, bg_amount, bg_expiry_date, bg_type, department, contract_status, amount_given, amount_balance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
-        """, (contract_no, contract_date, contract_type, total_value, delivery_deadline, bg_number, bg_amount, bg_expiry_date, bg_type, department, total_value), commit=True)
-        meta = execute_query(f"SELECT contract_id FROM {_cm()} WHERE contract_no = %s", (contract_no,), fetch_one=True)
-        contract_id = meta['contract_id']
-
-        for item_name, part_number, qty, unit_price, total_price, deliver_balance in items_data:
-            execute_query(f"""
-                INSERT INTO {_ci()} (contract_id, item_name, part_number, qty, unit_price, total_price, delivered_qty, deliver_balance)
-                VALUES (%s, %s, %s, %s, %s, %s, 0, %s)
-            """, (contract_id, item_name, part_number, qty, unit_price, total_price, deliver_balance), commit=True)
-
-        session.pop(SESSION_KEY, None)
-        session.pop('contracts_new_contract_id', None)
-        flash('Contract and items saved.', 'success')
+            (contract_no, contract_date, contract_type, total_value, delivery_deadline, 
+             bg_number, bg_issue_date, bg_amount, bg_expiry_date, bg_type, 
+             department, beneficiary, bank_name, expected_bg_release_date, remarks,
+             contract_status, amount_given, amount_balance)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
+        """, (contract_no, contract_date, contract_type, total_value, delivery_deadline, 
+              bg_number, bg_issue_date, bg_amount or 0, bg_expiry_date, bg_type, 
+              department, beneficiary, bank_name, expected_bg_release_date, remarks,
+              total_value), commit=True)
+        flash('Contract saved. Use "Input items for a contract" to add items.', 'success')
         return redirect(url_for(f'{BP}.contracts_dashboard'))
 
-    # GET: show items form; contract is from session (no contract_id yet)
-    return render_template(TP + 'input_contract_items.html', contract=pending, contract_id=None, existing_items=[],
-                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+    return render_template(TP + 'input_contract.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
 @bp.route('/input-contract-items/<int:contract_id>', methods=['GET', 'POST'])
@@ -298,6 +234,19 @@ def input_contract_items(contract_id):
 
     existing_items = execute_query(f"SELECT * FROM {_ci()} WHERE contract_id = %s ORDER BY item_id", (contract_id,), fetch=True) or []
     return render_template(TP + 'input_contract_items.html', contract=meta, contract_id=contract_id, existing_items=existing_items,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== 1b. Input items for a contract ==========
+@bp.route('/input-items-list')
+@_contracts_access_required
+def input_items_list():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(f"SELECT * FROM {_cm()} WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
+    else:
+        contracts = execute_query(f"SELECT * FROM {_cm()} ORDER BY contract_no", fetch=True) or []
+    return render_template(TP + 'select_contract.html', contracts=contracts, search_q=q, mode='input_items',
                            show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
@@ -872,8 +821,10 @@ def display_contract_list():
         contracts = execute_query(f"SELECT * FROM {_cm()} WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
     else:
         contracts = execute_query(f"SELECT * FROM {_cm()} ORDER BY contract_no", fetch=True) or []
+    from auth import get_user_roles
+    user_roles = get_user_roles(session.get('user_email', ''))
     return render_template(TP + 'display_list.html', contracts=contracts, search_q=q,
-                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
 
 
 @bp.route('/display-contract/<int:contract_id>')
@@ -888,7 +839,182 @@ def display_contract_detail(contract_id):
                            show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
-# ========== 8. Renew BG ==========
+
+# ========== 9. Edit Contract Items ==========
+@bp.route('/edit-contract-items')
+@_contracts_access_required
+def edit_contract_items_list():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(f"SELECT * FROM {_cm()} WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
+    else:
+        contracts = execute_query(f"SELECT * FROM {_cm()} ORDER BY contract_no", fetch=True) or []
+    return render_template(TP + 'select_contract.html', contracts=contracts, search_q=q,
+                           mode='edit_contract_items', show_nav_menu=True,
+                           accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/edit-contract-items/<int:contract_id>')
+@_contracts_access_required
+def edit_contract_items_select(contract_id):
+    meta = execute_query(f"SELECT * FROM {_cm()} WHERE contract_id = %s", (contract_id,), fetch_one=True)
+    if not meta:
+        flash('Contract not found', 'error')
+        return redirect(url_for(f'{BP}.edit_contract_items_list'))
+    items = execute_query("SELECT * FROM contract_items WHERE contract_id = %s ORDER BY item_id", (contract_id,), fetch=True) or []
+    return render_template(TP + 'select_contract_item.html', contract=meta, items=items,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+
+@bp.route('/edit-contract-items/<int:contract_id>/<int:item_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def edit_contract_item(contract_id, item_id):
+    meta = execute_query(f"SELECT * FROM {_cm()} WHERE contract_id = %s", (contract_id,), fetch_one=True)
+    item = execute_query("SELECT * FROM contract_items WHERE item_id = %s AND contract_id = %s", (item_id, contract_id), fetch_one=True)
+    if not meta or not item:
+        flash('Contract or item not found', 'error')
+        return redirect(url_for(f'{BP}.edit_contract_items_list'))
+
+    if request.method == 'POST':
+        item_name = (request.form.get('item_name') or '').strip()
+        part_number = (request.form.get('part_number') or '').strip() or None
+        try:
+            qty = int(request.form.get('qty') or 0)
+        except Exception:
+            qty = 0
+        try:
+            unit_price = float(request.form.get('unit_price') or 0)
+        except Exception:
+            unit_price = 0
+
+        if not item_name:
+            flash('Item name is required.', 'error')
+            return redirect(url_for(f'{BP}.edit_contract_item', contract_id=contract_id, item_id=item_id))
+        if qty <= 0:
+            flash('Quantity must be greater than 0.', 'error')
+            return redirect(url_for(f'{BP}.edit_contract_item', contract_id=contract_id, item_id=item_id))
+        if unit_price < 0:
+            flash('Unit price cannot be negative.', 'error')
+            return redirect(url_for(f'{BP}.edit_contract_item', contract_id=contract_id, item_id=item_id))
+
+        total_price = round(qty * unit_price, 2)
+        original_delivered = item.get('delivered_qty') or 0
+        deliver_balance = max(qty - original_delivered, 0)
+
+        execute_query("""
+            UPDATE contract_items SET
+                item_name = %s, part_number = %s, qty = %s, unit_price = %s,
+                total_price = %s, deliver_balance = %s
+            WHERE item_id = %s AND contract_id = %s
+        """, (item_name, part_number, qty, unit_price, total_price, deliver_balance, item_id, contract_id), commit=True)
+        flash('Item updated successfully.', 'success')
+        return redirect(url_for(f'{BP}.edit_contract_items_select', contract_id=contract_id))
+
+    return render_template(TP + 'edit_contract_item.html', contract=meta, item=item,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== 10. Edit Contract ==========
+@bp.route('/edit-contract')
+@_contracts_access_required
+def edit_contract_list():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(f"SELECT * FROM {_cm()} WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
+    else:
+        contracts = execute_query(f"SELECT * FROM {_cm()} ORDER BY contract_no", fetch=True) or []
+    return render_template(TP + 'select_contract.html', contracts=contracts, search_q=q, mode='edit_contract',
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/edit-contract/<int:contract_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def edit_contract(contract_id):
+    meta = execute_query(f"SELECT * FROM {_cm()} WHERE contract_id = %s", (contract_id,), fetch_one=True)
+    if not meta:
+        flash('Contract not found', 'error')
+        return redirect(url_for(f'{BP}.edit_contract_list'))
+
+    if request.method == 'POST':
+        contract_no = (request.form.get('contract_no') or '').strip()
+        contract_date = (request.form.get('contract_date') or '').strip()
+        contract_type = request.form.get('contract_type', 'manufacturing').strip()
+        if contract_type not in ('manufacturing', 'supply'):
+            contract_type = 'manufacturing'
+        try:
+            total_value = float(request.form.get('total_value') or 0)
+        except Exception:
+            total_value = 0
+        delivery_deadline = (request.form.get('delivery_deadline') or '').strip()
+        contract_status = request.form.get('contract_status', 'active').strip()
+        if contract_status not in ('active', 'completed', 'warranty period'):
+            contract_status = 'active'
+        department = (request.form.get('department') or '').strip()
+        beneficiary = (request.form.get('beneficiary') or '').strip()
+        bank_name = (request.form.get('bank_name') or '').strip()
+        bg_number = (request.form.get('bg_number') or '').strip() or None
+        bg_issue_date = (request.form.get('bg_issue_date') or '').strip() or None
+        try:
+            bg_amount = float(request.form.get('bg_amount') or 0)
+        except Exception:
+            bg_amount = 0
+        bg_expiry_date = (request.form.get('bg_expiry_date') or '').strip() or None
+        bg_type_radio = (request.form.get('bg_type_radio') or '').strip()
+        if bg_type_radio == 'Cash Margin':
+            try:
+                pct = float(request.form.get('cash_margin_pct') or 0)
+            except Exception:
+                pct = 0
+            bg_type = f'Cash Margin {pct:.4g}%' if pct > 0 else 'Cash Margin'
+        else:
+            bg_type = bg_type_radio or None
+        try:
+            amount_given = float(request.form.get('amount_given') or 0)
+        except Exception:
+            amount_given = 0
+        amount_balance = total_value - amount_given
+        expected_bg_release_date = (request.form.get('expected_bg_release_date') or '').strip() or None
+        remarks = (request.form.get('remarks') or '').strip() or None
+        final_crv_no = (request.form.get('final_crv_no') or '').strip() or None
+        final_crv_date = (request.form.get('final_crv_date') or '').strip() or None
+
+        if not contract_no or not contract_date or not delivery_deadline or not department or not beneficiary or not bank_name:
+            flash('All required fields marked with * must be filled.', 'error')
+            return redirect(url_for(f'{BP}.edit_contract', contract_id=contract_id))
+        if total_value <= 0:
+            flash('Total Value must be greater than 0', 'error')
+            return redirect(url_for(f'{BP}.edit_contract', contract_id=contract_id))
+
+        if contract_no != meta.get('contract_no'):
+            existing = execute_query(f"SELECT 1 FROM {_cm()} WHERE contract_no = %s AND contract_id != %s", (contract_no, contract_id), fetch_one=True)
+            if existing:
+                flash(f'Contract number "{contract_no}" already exists.', 'error')
+                return redirect(url_for(f'{BP}.edit_contract', contract_id=contract_id))
+
+        execute_query(f"""
+            UPDATE {_cm()} SET
+                contract_no = %s, contract_date = %s, contract_type = %s, total_value = %s,
+                delivery_deadline = %s, contract_status = %s, department = %s, beneficiary = %s,
+                bank_name = %s, bg_number = %s, bg_issue_date = %s, bg_amount = %s,
+                bg_expiry_date = %s, bg_type = %s, amount_given = %s, amount_balance = %s,
+                expected_bg_release_date = %s, remarks = %s,
+                final_crv_no = %s, final_crv_date = %s
+            WHERE contract_id = %s
+        """, (contract_no, contract_date, contract_type, total_value,
+              delivery_deadline, contract_status, department, beneficiary,
+              bank_name, bg_number, bg_issue_date, bg_amount or 0,
+              bg_expiry_date, bg_type, amount_given, amount_balance,
+              expected_bg_release_date, remarks,
+              final_crv_no, final_crv_date, contract_id), commit=True)
+        flash('Contract updated successfully.', 'success')
+        return redirect(url_for(f'{BP}.display_contract_list'))
+
+    return render_template(TP + 'edit_contract.html', contract=meta,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== 10. Renew BG ==========
 @bp.route('/renew-bg')
 @_contracts_access_required
 def renew_bg_list():
@@ -910,17 +1036,221 @@ def renew_bg_edit(contract_id):
         return redirect(url_for(f'{BP}.renew_bg_list'))
     
     if request.method == 'POST':
-        bg_number = (request.form.get('bg_number') or '').strip()
-        bg_expiry_date = (request.form.get('bg_expiry_date') or '').strip()
-        bg_types = request.form.getlist('bg_type')
-        bg_type_str = ', '.join(bg_types) if bg_types else None
+        new_bg_number = (request.form.get('new_bg_number') or '').strip()
+        new_bg_issue_date = (request.form.get('new_bg_issue_date') or '').strip()
+        new_bg_expiry_date = (request.form.get('new_bg_expiry_date') or '').strip()
+        bg_type_radio = (request.form.get('bg_type_radio') or '').strip()
         
-        execute_query(f"UPDATE {_cm()} SET bg_number = %s, bg_expiry_date = %s, bg_type = %s WHERE contract_id = %s",
-                      (bg_number, bg_expiry_date, bg_type_str, contract_id), commit=True)
-        flash('BG details updated successfully.', 'success')
+        # New fields for renewal
+        expected_bg_release_date = request.form.get('expected_bg_release_date', '').strip() or None
+        remarks = (request.form.get('remarks') or '').strip() or None
+
+        if bg_type_radio == 'Cash Margin':
+            try:
+                pct = float(request.form.get('cash_margin_pct') or 0)
+            except Exception:
+                pct = 0
+            bg_type_str = f'Cash Margin {pct:.4g}%' if pct > 0 else 'Cash Margin'
+        else:
+            bg_type_str = bg_type_radio or None
+
+        def _append(old, new, is_number=False):
+            old = (old or '').strip()
+            new = (new or '').strip()
+            if not new:
+                return old
+            if is_number and old:
+                # If new number matches the latest number in history, don't append
+                last_num = old.split(',')[-1].strip()
+                if new == last_num:
+                    return old
+            return f'{old}, {new}' if old else new
+
+        updated_bg_number = _append(meta.get('bg_number'), new_bg_number, is_number=True)
+        updated_bg_issue_date = _append(meta.get('bg_issue_date'), new_bg_issue_date)
+        updated_bg_expiry_date = _append(meta.get('bg_expiry_date'), new_bg_expiry_date)
+
+        execute_query(
+            f"UPDATE {_cm()} SET bg_number = %s, bg_issue_date = %s, bg_expiry_date = %s, bg_type = %s, expected_bg_release_date = %s, remarks = %s WHERE contract_id = %s",
+            (updated_bg_number, updated_bg_issue_date, updated_bg_expiry_date, bg_type_str, expected_bg_release_date, remarks, contract_id),
+            commit=True
+        )
+        flash('BG details updated and history preserved.', 'success')
         return redirect(url_for(f'{BP}.display_contract_list'))
 
     return render_template(TP + 'renew_bg_form.html', contract=meta,
                            show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
+# ========== 11. Final CRV Info ==========
+@bp.route('/final-crv')
+@_contracts_access_required
+def final_crv_list():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(f"SELECT * FROM {_cm()} WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
+    else:
+        contracts = execute_query(f"SELECT * FROM {_cm()} ORDER BY contract_no", fetch=True) or []
+    return render_template(TP + 'select_contract.html', contracts=contracts, search_q=q, mode='final_crv',
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/final-crv/<int:contract_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def final_crv(contract_id):
+    meta = execute_query(f"SELECT * FROM {_cm()} WHERE contract_id = %s", (contract_id,), fetch_one=True)
+    if not meta:
+        flash('Contract not found', 'error')
+        return redirect(url_for(f'{BP}.final_crv_list'))
+
+    if request.method == 'POST':
+        final_crv_no = (request.form.get('final_crv_no') or '').strip() or None
+        final_crv_date = (request.form.get('final_crv_date') or '').strip() or None
+        execute_query(
+            f"UPDATE {_cm()} SET final_crv_no = %s, final_crv_date = %s WHERE contract_id = %s",
+            (final_crv_no, final_crv_date, contract_id), commit=True
+        )
+        flash('Final CRV info saved successfully.', 'success')
+        return redirect(url_for(f'{BP}.display_contract_list'))
+
+    return render_template(TP + 'enter_final_crv.html', contract=meta,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== 12. Display BG ==========
+@bp.route('/display-bg')
+@_contracts_access_required
+def display_bg():
+    contracts = execute_query(
+        f"SELECT * FROM {_cm()} ORDER BY contract_no",
+        fetch=True
+    ) or []
+    return render_template(TP + 'display_bg.html', contracts=contracts,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/print-bg/<int:contract_id>')
+@_contracts_access_required
+def print_bg(contract_id):
+    contract = execute_query(
+        f"SELECT * FROM {_cm()} WHERE contract_id = %s",
+        (contract_id,), fetch_one=True
+    )
+    if not contract:
+        flash('Contract not found.', 'error')
+        return redirect(url_for(f'{BP}.display_bg'))
+    return render_template(TP + 'print_bg.html', contract=contract, line=LINE, bp=BP)
+
+
+# ========== CDR (Call Deposit Receipt) ==========
+
+def _cdr(): return tbl(LINE, 'cdr_info')
+
+@bp.route('/input-cdr', methods=['GET', 'POST'])
+@_contracts_access_required
+def input_cdr():
+    if request.method == 'POST':
+        f = request.form
+        def v(k): return f.get(k, '').strip() or None
+        execute_query(
+            f"""INSERT INTO {_cdr()}
+               (cdr_date, cdr_no, cdr_ref_no, bank, cdr_amount, organization,
+                tender_no, tender_submission_date, quoted_item, cdr_receiving_date, remarks)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (v('cdr_date'), v('cdr_no'), v('cdr_ref_no'), v('bank'),
+             v('cdr_amount'), v('organization'), v('tender_no'),
+             v('tender_submission_date'), v('quoted_item'), v('cdr_receiving_date'), v('remarks')),
+            commit=True
+        )
+        flash('CDR saved successfully.', 'success')
+        return redirect(url_for(f'{BP}.input_cdr'))
+    return render_template(TP + 'input_cdr.html',
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/display-cdr')
+@_contracts_access_required
+def display_cdr():
+    cdrs = execute_query(f"SELECT * FROM {_cdr()} ORDER BY cdr_date DESC", fetch=True) or []
+    from auth import get_user_roles
+    user_roles = get_user_roles(session.get('user_email', ''))
+    return render_template(TP + 'display_cdr.html', cdrs=cdrs,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
+
+
+@bp.route('/edit-cdr')
+@_contracts_access_required
+def edit_cdr_list():
+    cdrs = execute_query(f"SELECT * FROM {_cdr()} ORDER BY cdr_date DESC", fetch=True) or []
+    return render_template(TP + 'edit_cdr_list.html', cdrs=cdrs,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/edit-cdr/<int:cdr_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def edit_cdr(cdr_id):
+    cdr = execute_query(f"SELECT * FROM {_cdr()} WHERE cdr_id = %s", (cdr_id,), fetch_one=True)
+    if not cdr:
+        flash('CDR not found.', 'error')
+        return redirect(url_for(f'{BP}.edit_cdr_list'))
+    if request.method == 'POST':
+        f = request.form
+        def v(k): return f.get(k, '').strip() or None
+        execute_query(
+            f"""UPDATE {_cdr()} SET
+               cdr_date=%s, cdr_no=%s, cdr_ref_no=%s, bank=%s, cdr_amount=%s,
+               organization=%s, tender_no=%s, tender_submission_date=%s, quoted_item=%s,
+               cdr_receiving_date=%s, remarks=%s, pv_no=%s, pv_date=%s,
+               status=%s, release_date=%s, rv_no=%s, rv_date=%s
+               WHERE cdr_id=%s""",
+            (v('cdr_date'), v('cdr_no'), v('cdr_ref_no'), v('bank'), v('cdr_amount'),
+             v('organization'), v('tender_no'), v('tender_submission_date'), v('quoted_item'),
+             v('cdr_receiving_date'), v('remarks'), v('pv_no'), v('pv_date'),
+             v('status'), v('release_date'), v('rv_no'), v('rv_date'), cdr_id),
+            commit=True
+        )
+        flash('CDR updated successfully.', 'success')
+        return redirect(url_for(f'{BP}.edit_cdr_list'))
+    return render_template(TP + 'edit_cdr.html', cdr=cdr,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== CDR Accounts ==========
+
+@bp.route('/cdr-accounts')
+@_contracts_access_required
+def cdr_accounts_list():
+    cdrs = execute_query(f"SELECT * FROM {_cdr()} ORDER BY cdr_date DESC", fetch=True) or []
+    return render_template(TP + 'cdr_accounts_list.html', cdrs=cdrs,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/cdr-accounts/<int:cdr_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def cdr_accounts(cdr_id):
+    cdr = execute_query(f"SELECT * FROM {_cdr()} WHERE cdr_id = %s", (cdr_id,), fetch_one=True)
+    if not cdr:
+        flash('CDR not found.', 'error')
+        return redirect(url_for(f'{BP}.cdr_accounts_list'))
+    if request.method == 'POST':
+        f = request.form
+        def v(k): return f.get(k, '').strip() or None
+        execute_query(
+            f"""UPDATE {_cdr()} SET pv_no=%s, pv_date=%s, status=%s,
+               release_date=%s, rv_no=%s, rv_date=%s WHERE cdr_id=%s""",
+            (v('pv_no'), v('pv_date'), v('status'),
+             v('release_date'), v('rv_no'), v('rv_date'), cdr_id),
+            commit=True
+        )
+        flash('Accounts info saved successfully.', 'success')
+        return redirect(url_for(f'{BP}.cdr_accounts_list'))
+    return render_template(TP + 'cdr_accounts.html', cdr=cdr,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/delete-cdr/<int:cdr_id>', methods=['POST'])
+@_contracts_access_required
+def delete_cdr(cdr_id):
+    execute_query(f"DELETE FROM {_cdr()} WHERE cdr_id = %s", (cdr_id,), commit=True)
+    flash('CDR deleted successfully.', 'success')
+    return redirect(url_for(f'{BP}.display_cdr'))

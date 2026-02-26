@@ -77,15 +77,15 @@
                     <td>{{ item.part_description }}</td>
                     <td>{{ item.footprint }}</td>
                     <td>{{ item.qty }}</td>
-                    <td style="text-align: right;">{{ "%.2f"|format(item.unit_price) }}</td>
-                    <td style="text-align: right;">{{ "%.2f"|format(item.total_price) }}</td>
+                    <td style="text-align: right;">{{ item.unit_price|commas }}</td>
+                    <td style="text-align: right;">{{ item.total_price|commas }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr class="grand-total-row">
                     <td colspan="7" style="text-align: right;"><strong>Grand Total in {{ currency }}</strong></td>
-                    <td style="text-align: right;"><strong>{{ "%.2f"|format(grand_total) }}</strong></td>
+                    <td style="text-align: right;"><strong>{{ grand_total|commas }}</strong></td>
                 </tr>
                 <tr class="contact-row">
                     <td colspan="8" style="text-align: center; padding: 1rem;"><span><strong>Cell:</strong>

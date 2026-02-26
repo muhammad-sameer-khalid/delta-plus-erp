@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Edit Contract ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Edit Contract: {{ contract.contract_no }} ({{ line|capitalize }})</h1>
+    <p class="mb-4">Update contract metadata. Changes will be saved immediately.</p>
+    <div class="mt-4"><a href="{{ url_for(bp ~ '.edit_contract_list') }}" class="btn btn-secondary mb-3">← Back to
+            Search</a></div>
+
+    {% set cur_type = contract.bg_type or '' %}
+    {% set is_cash = 'Cash Margin' in cur_type %}
+    {% set cur_pct = cur_type.replace('Cash Margin ', '').replace('%', '').strip() if is_cash else '' %}
+
+    <form method="POST" action="{{ url_for(bp ~ '.edit_contract', contract_id=contract.contract_id) }}" class="mt-4"
+        style="max-width: 520px;" id="editContractForm">
+        <div class="form-group">
+            <label for="contract_no" class="form-label required">Contract No.</label>
+            <input type="text" id="contract_no" name="contract_no" class="form-input" required
+                value="{{ contract.contract_no }}">
+        </div>
+        <div class="form-group">
+            <label for="contract_date" class="form-label required">Contract Date</label>
+            <input type="date" id="contract_date" name="contract_date" class="form-input" required
+                value="{{ contract.contract_date }}">
+        </div>
+        <div class="form-group">
+            <label for="contract_type" class="form-label required">Contract Type</label>
+            <select id="contract_type" name="contract_type" class="form-input" required>
+                <option value="manufacturing" {% if contract.contract_type=='manufacturing' %}selected{% endif %}>
+                    Manufacturing</option>
+                <option value="supply" {% if contract.contract_type=='supply' %}selected{% endif %}>Supply</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="total_value" class="form-label required">Total Value (Rs.)</label>
+            <input type="number" id="total_value" name="total_value" class="form-input" step="0.01" min="0.01" required
+                value="{{ contract.total_value }}">
+        </div>
+        <div class="form-group">
+            <label for="delivery_deadline" class="form-label required">Delivery Deadline</label>
+            <input type="date" id="delivery_deadline" name="delivery_deadline" class="form-input" required
+                value="{{ contract.delivery_deadline }}">
+        </div>
+        <div class="form-group">
+            <label for="contract_status" class="form-label required">Contract Status</label>
+            <select id="contract_status" name="contract_status" class="form-input" required>
+                <option value="active" {% if contract.contract_status=='active' %}selected{% endif %}>Active</option>
+                <option value="completed" {% if contract.contract_status=='completed' %}selected{% endif %}>Completed
+                </option>
+                <option value="warranty period" {% if contract.contract_status=='warranty period' %}selected{% endif %}>
+                    Warranty Period</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="department" class="form-label required">Department</label>
+            <input type="text" id="department" name="department" class="form-input" required
+                value="{{ contract.department or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="beneficiary" class="form-label required">Beneficiary</label>
+            <input type="text" id="beneficiary" name="beneficiary" class="form-input" required
+                value="{{ contract.beneficiary or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="bank_name" class="form-label required">Bank Name</label>
+            <input type="text" id="bank_name" name="bank_name" class="form-input" required
+                value="{{ contract.bank_name or '' }}">
+        </div>
+
+        <div
+            style="background: #f9f9f9; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1rem;">
+            <p style="font-weight: bold; margin-bottom: 0.5rem; color: #333;">Security Deposit (BG or CDR)</p>
+            <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed #ccc;">
+                <div class="form-group">
+                    <label for="bg_number" class="form-label">BG Number</label>
+                    <input type="text" id="bg_number" name="bg_number" class="form-input"
+                        value="{{ contract.bg_number or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="bg_issue_date" class="form-label">BG Issue Date</label>
+                    <input type="text" id="bg_issue_date" name="bg_issue_date" class="form-input"
+                        value="{{ contract.bg_issue_date or '' }}" placeholder="e.g. 2024-01-15">
+                </div>
+                <div class="form-group">
+                    <label for="bg_amount" class="form-label">BG Amount</label>
+                    <input type="number" id="bg_amount" name="bg_amount" class="form-input" step="0.01" min="0"
+                        value="{{ contract.bg_amount or '' }}" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="bg_expiry_date" class="form-label">BG Expiry Date</label>
+                    <input type="text" id="bg_expiry_date" name="bg_expiry_date" class="form-input"
+                        value="{{ contract.bg_expiry_date or '' }}" placeholder="e.g. 2025-01-15">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">BG Type</label>
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="bg_type_radio" value="CDR" {% if cur_type=='CDR' %}checked{% endif
+                                %}> CDR
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="bg_type_radio" value="Bank Margin" {% if cur_type=='Bank Margin'
+                                %}checked{% endif %}> Bank Margin
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="bg_type_radio" value="Cash Margin" {% if is_cash %}checked{% endif
+                                %}> Cash Margin
+                            <span style="display:flex;align-items:center;gap:0.25rem;margin-left:0.5rem;">
+                                <input type="number" id="cash_margin_pct" name="cash_margin_pct" min="1" max="100"
+                                    step="0.01" value="{{ cur_pct }}" placeholder="%"
+                                    style="width:80px; padding:4px 6px; border:1px solid #ccc; border-radius:4px; background:#f0f0f0; color:#888;"
+                                    {% if not is_cash %}disabled{% endif %}>
+                                <span id="pct_label"
+                                    style="color:{% if is_cash %}inherit{% else %}#888{% endif %};">%</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="amount_given" class="form-label">Amount Given (Rs.)</label>
+            <input type="number" id="amount_given" name="amount_given" class="form-input" step="0.01" min="0"
+                value="{{ contract.amount_given or 0 }}">
+        </div>
+        <div class="form-group">
+            <label for="expected_bg_release_date" class="form-label required">Expected BG Release Date</label>
+            <input type="date" id="expected_bg_release_date" name="expected_bg_release_date" class="form-input" required
+                value="{{ contract.expected_bg_release_date or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="remarks" class="form-label">Remarks</label>
+            <textarea id="remarks" name="remarks" class="form-input" rows="3">{{ contract.remarks or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="final_crv_no" class="form-label">Final CRV No.</label>
+            <input type="text" id="final_crv_no" name="final_crv_no" class="form-input"
+                value="{{ contract.final_crv_no or '' }}" placeholder="e.g. CRV-2025-001">
+        </div>
+        <div class="form-group">
+            <label for="final_crv_date" class="form-label">Final CRV Date</label>
+            <input type="date" id="final_crv_date" name="final_crv_date" class="form-input"
+                value="{{ contract.final_crv_date or '' }}">
+        </div>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for(bp ~ '.edit_contract_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        var radios = document.querySelectorAll('input[name="bg_type_radio"]');
+        var pctInput = document.getElementById('cash_margin_pct');
+        var pctLabel = document.getElementById('pct_label');
+
+        function updatePctField() {
+            var selected = document.querySelector('input[name="bg_type_radio"]:checked');
+            var isCashMargin = selected && selected.value === 'Cash Margin';
+            pctInput.disabled = !isCashMargin;
+            pctInput.required = isCashMargin;
+            pctInput.style.background = isCashMargin ? '' : '#f0f0f0';
+            pctInput.style.color = isCashMargin ? '' : '#888';
+            pctLabel.style.color = isCashMargin ? '' : '#888';
+            if (!isCashMargin) pctInput.value = '';
+        }
+
+        radios.forEach(function (r) { r.addEventListener('change', updatePctField); });
+        updatePctField();
+    })();
+</script>
+{% endblock %}

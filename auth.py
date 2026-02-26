@@ -29,7 +29,7 @@ BASE_MEMBERS = [
 ]
 
 # Director and Global Roles
-GLOBAL_ROLES = ['director', 'gm logistics']
+GLOBAL_ROLES = ['director', 'gm logistics', 'contracts_data_entry', 'data_entry_bg', 'data_entry_accounts', 'hr_manager']
 
 # Tanks Roles
 # General Manager for Tanks is just 'general manager'
@@ -80,9 +80,12 @@ def get_production_lines_for_user(email):
     return list(lines)
 
 def can_access_contracts(email, line='tanks'):
-    """Contracts card visible to director, gm logistics, or line-specific GM."""
+    """Contracts card visible to director, gm logistics, contracts_data_entry, data entry roles, or line-specific GM."""
     user_roles = get_user_roles(email)
-    if 'director' in user_roles or 'gm logistics' in user_roles:
+    if any(r in user_roles for r in [
+        'director', 'gm logistics', 'contracts_data_entry',
+        'data_entry_bg', 'data_entry_accounts', 'hr_manager'
+    ]):
         return True
     
     if line == 'tanks':

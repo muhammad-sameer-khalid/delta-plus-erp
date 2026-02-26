@@ -2,8 +2,8 @@
 {% block title %}Select contract ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
 {% block content %}
 <div class="container">
-    <h1>Select contract - {{ mode|title }}</h1>
-    <p class="mb-4">Search and select a contract to enter {{ mode }} info.</p>
+    <h1>Select contract - {{ mode|replace('_', ' ')|title }}</h1>
+    <p class="mb-4">Search and select a contract to enter {{ mode|replace('_', ' ') }} info.</p>
 
     <div class="mt-4">
         <!-- Back button pointing to the specific line dashboard -->
@@ -41,7 +41,7 @@
                     <td>{{ c.contract_no }}</td>
                     <td>{{ c.contract_date }}</td>
                     <td>{{ c.contract_type }}</td>
-                    <td>{{ c.total_value }}</td>
+                    <td>{{ c.total_value|commas }}</td>
                     <td>{{ c.contract_status }}</td>
                     <td>
                         {% if mode == 'inspection' %}
@@ -62,6 +62,18 @@
                         {% elif mode == 'renew_bg' %}
                         <a href="{{ url_for(bp ~ '.renew_bg_edit', contract_id=c.contract_id) }}"
                             class="btn btn-primary">Select</a>
+                        {% elif mode == 'input_items' %}
+                        <a href="{{ url_for(bp ~ '.input_contract_items', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% elif mode == 'edit_contract' %}
+                        <a href="{{ url_for(bp ~ '.edit_contract', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Edit</a>
+                        {% elif mode == 'edit_contract_items' %}
+                        <a href="{{ url_for(bp ~ '.edit_contract_items_select', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
+                        {% elif mode == 'final_crv' %}
+                        <a href="{{ url_for(bp ~ '.final_crv', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -81,9 +93,6 @@
             const tableBody = document.getElementById('contractsTableBody');
             const noMsgDiv = document.getElementById('noContractsMsg');
             const mode = "{{ mode }}";
-            // Use window.location as base if needed, or constructed path
-            // Better to use the passed variable logic if possible, or simple JS replacement
-            // We can re-use the python url_for injection for the prefix.
             const contractsPathPrefix = "{{ url_for(bp ~ '.contracts_dashboard') }}".replace(/\/$/, '');
             let searchTimeout = null;
 
@@ -94,6 +103,10 @@
                 if (mode === 'payment') return contractsPathPrefix + '/input-payment/' + contractId;
                 if (mode === 'invoice') return contractsPathPrefix + '/input-invoice/' + contractId;
                 if (mode === 'renew_bg') return contractsPathPrefix + '/renew-bg/' + contractId;
+                if (mode === 'input_items') return contractsPathPrefix + '/input-contract-items/' + contractId;
+                if (mode === 'edit_contract') return contractsPathPrefix + '/edit-contract/' + contractId;
+                if (mode === 'edit_contract_items') return contractsPathPrefix + '/edit-contract-items/' + contractId;
+                if (mode === 'final_crv') return contractsPathPrefix + '/final-crv/' + contractId;
                 return '#';
             }
 
@@ -110,7 +123,7 @@
                     <td>${c.contract_no || ''}</td>
                     <td>${c.contract_date || ''}</td>
                     <td>${c.contract_type || ''}</td>
-                    <td>${c.total_value || ''}</td>
+                    <td>${formatNumber(c.total_value)}</td>
                     <td>${c.contract_status || ''}</td>
                     <td>
                         <a href="${getActionUrl(c.contract_id)}" class="btn btn-primary">Select</a>
@@ -123,14 +136,20 @@
                 const q = this.value.trim();
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(function () {
-                    // Note: We use the existing API route. Assuming it's shared or we use the current BP.
-                    // The original code used 'bp ~ ".api_search_contracts"', which is correct.
                     fetch('{{ url_for(bp ~ ".api_search_contracts") }}?q=' + encodeURIComponent(q))
                         .then(r => r.json())
                         .then(data => { renderTable(data.contracts); })
                         .catch(err => console.error('Search failed', err));
                 }, 300);
             });
+
+            function formatNumber(num) {
+                if (num === null || num === undefined || num === '') return '0.00';
+                return new Intl.NumberFormat('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(num);
+            }
         })();
     </script>
 </div>

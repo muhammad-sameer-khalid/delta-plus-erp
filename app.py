@@ -127,7 +127,56 @@ def admin():
                          user_roles=user_roles_data,
                          valid_roles=VALID_ROLES)
 
-# ============================================
+
+@app.route('/admin/sync-database')
+@role_required('director', 'general manager', 'gm logistics')
+def sync_database():
+    """Generate a full mysqldump and serve it as a .sql download."""
+    import subprocess
+    import tempfile
+    from flask import send_file
+    from config import Config
+
+    db_host = getattr(Config, 'DB_HOST', 'localhost')
+    db_user = getattr(Config, 'DB_USER', 'root')
+    db_password = getattr(Config, 'DB_PASSWORD', '')
+    db_name = getattr(Config, 'DB_NAME', 'delta_plus_erp')
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'delta_plus_erp_backup_{timestamp}.sql'
+
+    try:
+        # Build mysqldump command
+        cmd = ['mysqldump', f'--host={db_host}', f'--user={db_user}']
+        if db_password:
+            cmd.append(f'--password={db_password}')
+        cmd += ['--single-transaction', '--routines', '--triggers', db_name]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            flash(f'Database sync failed: {result.stderr[:200]}', 'error')
+            return redirect(url_for('admin'))
+
+        # Write to temp file and send as download
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.sql', mode='w', encoding='utf-8')
+        tmp.write(result.stdout)
+        tmp.close()
+
+        return send_file(
+            tmp.name,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/sql'
+        )
+    except FileNotFoundError:
+        flash('mysqldump not found. Make sure MySQL is installed and mysqldump is in the system PATH.', 'error')
+        return redirect(url_for('admin'))
+    except subprocess.TimeoutExpired:
+        flash('Database sync timed out. Try again.', 'error')
+        return redirect(url_for('admin'))
+
+
+
 # Dashboard Routes
 # ============================================
 
@@ -146,6 +195,16 @@ def inject_permissions():
         can_access_contracts=can_access_contracts,
         can_delete_items=can_delete_items
     )
+
+@app.template_filter('commas')
+def commas_filter(value):
+    """Format a number with commas and 2 decimal places"""
+    if value is None or value == '':
+        return '0.00'
+    try:
+        return "{:,.2f}".format(float(value))
+    except (ValueError, TypeError, Exception):
+        return '0.00'
 
 @app.route('/tanks')
 @login_required

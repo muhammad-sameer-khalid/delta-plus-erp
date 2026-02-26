@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Display BGs – {{ line|capitalize }} – Delta Plus ERP{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+        <div>
+            <h1 class="mb-0">Bank Guarantees – {{ line|capitalize }}</h1>
+            <p class="text-muted mb-0">All Bank Guarantee records for this production line.</p>
+        </div>
+        <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">← Back to Contracts</a>
+    </div>
+
+    <!-- Predictive Search -->
+    <div class="mb-4 d-flex align-items-center bg-light rounded"
+        style="max-width:600px; border: 1px solid #ddd; padding: 12px 16px;">
+        <span class="text-muted" style="font-size: 1.3rem; margin-right: 12px;">🔍</span>
+        <input type="text" id="bg-search" class="form-control border-0 flex-grow-1 shadow-none"
+            placeholder="Search Bank Guarantees..."
+            style="font-size: 1.1rem; border-radius: 6px; background-color: #f8f9fa; padding: 10px 14px;">
+    </div>
+
+    {% if contracts %}
+    <div style="overflow-x:auto;">
+        <table class="table table-bordered table-sm" id="bg-table">
+            <thead class="table-dark">
+                <tr>
+                    <th>Contract No.</th>
+                    <th>Contract Date</th>
+                    <th>Bank Name</th>
+                    <th>Total Value</th>
+                    <th>Delivery Deadline</th>
+                    <th>BG No.</th>
+                    <th>Department</th>
+                    <th>BG Type</th>
+                    <th>BG Amount</th>
+                    <th>BG Issue Date</th>
+                    <th>BG Expiry Date</th>
+                    <th>Final CRV No.</th>
+                    <th>Final CRV Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in contracts %}
+                <tr
+                    data-search="{{ c.contract_no|lower }} {{ (c.bank_name or '')|lower }} {{ (c.total_value or '')|string }} {{ (c.bg_number or '')|lower }}">
+                    <td>{{ c.contract_no }}</td>
+                    <td>{{ c.contract_date }}</td>
+                    <td>{{ c.bank_name or '—' }}</td>
+                    <td>{{ c.total_value }}</td>
+                    <td>{{ c.delivery_deadline }}</td>
+                    <td>{{ c.bg_number or '—' }}</td>
+                    <td>{{ c.department or '—' }}</td>
+                    <td>{{ c.bg_type or '—' }}</td>
+                    <td>{{ c.bg_amount or '—' }}</td>
+                    <td>{{ c.bg_issue_date or '—' }}</td>
+                    <td>{{ c.bg_expiry_date or '—' }}</td>
+                    <td>{{ c.final_crv_no or '—' }}</td>
+                    <td>{{ c.final_crv_date or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for(bp ~ '.print_bg', contract_id=c.contract_id) }}"
+                            class="btn btn-sm btn-outline-primary" target="_blank">View / Print</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No contracts found.</p>
+    {% endif %}
+
+</div>
+
+<script>
+    (function () {
+        const input = document.getElementById('bg-search');
+        const rows = document.querySelectorAll('#bg-table tbody tr');
+        input.addEventListener('input', function () {
+            const q = this.value.toLowerCase().trim();
+            rows.forEach(function (row) {
+                const haystack = row.getAttribute('data-search') || '';
+                row.style.display = (!q || haystack.includes(q)) ? '' : 'none';
+            });
+        });
+    })();
+</script>
+{% endblock %}
