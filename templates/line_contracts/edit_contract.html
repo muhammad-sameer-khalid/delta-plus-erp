@@ -32,6 +32,16 @@
             </select>
         </div>
         <div class="form-group">
+            <label for="production_line" class="form-label required">Production Line</label>
+            <select id="production_line" name="production_line" class="form-input" required>
+                <option value="tanks" {% if line|lower=='tanks' %}selected{% endif %}>Tanks</option>
+                <option value="biomedical" {% if line|lower=='biomedical' %}selected{% endif %}>Biomedical</option>
+                <option value="battery" {% if line|lower=='battery' %}selected{% endif %}>Battery</option>
+            </select>
+            <small style="color: #666;">Changing this will move the contract and all its items to the selected
+                line.</small>
+        </div>
+        <div class="form-group">
             <label for="total_value" class="form-label required">Total Value (Rs.)</label>
             <input type="number" id="total_value" name="total_value" class="form-input" step="0.01" min="0.01" required
                 value="{{ contract.total_value }}">

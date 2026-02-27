@@ -1210,7 +1210,39 @@ def edit_contract(contract_id):
               bg_expiry_date, bg_type, amount_given, amount_balance,
               expected_bg_release_date, remarks,
               final_crv_no, final_crv_date, contract_id), commit=True)
-        flash('Contract updated successfully.', 'success')
+
+        new_line = request.form.get('production_line', LINE.lower()).strip().lower()
+        if new_line in ('tanks', 'biomedical', 'battery') and new_line != LINE.lower():
+            target_meta = 'contracts_metadata' if new_line == 'tanks' else f'contracts_metadata_{new_line}'
+            target_items = 'contract_items' if new_line == 'tanks' else f'contract_items_{new_line}'
+            
+            target_existing = execute_query(f"SELECT 1 FROM {target_meta} WHERE contract_no = %s", (contract_no,), fetch_one=True)
+            if target_existing:
+                flash(f'Cannot move: Contract "{contract_no}" already exists in {new_line.capitalize()}. Saved in current line instead.', 'warning')
+            else:
+                try:
+                    cols_meta = [r['Field'] for r in execute_query("SHOW COLUMNS FROM contracts_metadata", fetch=True) if r['Field'] != 'contract_id']
+                    cols_meta_str = ', '.join(cols_meta)
+                    execute_query(f"INSERT INTO {target_meta} ({cols_meta_str}) SELECT {cols_meta_str} FROM contracts_metadata WHERE contract_id = %s", (contract_id,), commit=True)
+                    
+                    new_id = execute_query(f"SELECT contract_id FROM {target_meta} WHERE contract_no = %s", (contract_no,), fetch_one=True)['contract_id']
+                    
+                    cols_items = [r['Field'] for r in execute_query("SHOW COLUMNS FROM contract_items", fetch=True) if r['Field'] not in ('item_id', 'contract_id')]
+                    if cols_items:
+                        cols_items_str = ', '.join(cols_items)
+                        execute_query(f"INSERT INTO {target_items} (contract_id, {cols_items_str}) SELECT %s, {cols_items_str} FROM contract_items WHERE contract_id = %s", (new_id, contract_id), commit=True)
+                        
+                    execute_query("DELETE FROM contract_items WHERE contract_id = %s", (contract_id,), commit=True)
+                    execute_query("DELETE FROM contracts_metadata WHERE contract_id = %s", (contract_id,), commit=True)
+                    
+                    flash(f'Contract updated and moved to {new_line.capitalize()} successfully.', 'success')
+                    return redirect(url_for(f'{BP}.display_contract_list'))
+                except Exception as e:
+                    logger.error(f"Error moving contract: {e}")
+                    flash('Error moving contract. Saved in current line instead.', 'warning')
+        else:
+            flash('Contract updated successfully.', 'success')
+
         return redirect(url_for(f'{BP}.display_contract_list'))
 
     return render_template(TP + 'edit_contract.html', contract=meta,
