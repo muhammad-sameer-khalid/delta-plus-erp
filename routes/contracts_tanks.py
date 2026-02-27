@@ -42,18 +42,16 @@ def _run_contracts_startup_checks_for_line(line=None):
     today = date.today()
     if line is None:
         suffix = ''
-        gm_role = 'gm logistics'
         label = 'tanks'
     elif line == 'biomedical':
         suffix = '_biomedical'
-        gm_role = 'gm logistics_biomedical'
         label = 'biomedical'
     elif line == 'battery':
         suffix = '_battery'
-        gm_role = 'gm logistics_battery'
         label = 'battery'
     else:
         return
+    gm_role = 'gm logistics'  # single GM logistics oversees all lines
     meta_t = f'contracts_metadata{suffix}'
     items_t = f'contract_items{suffix}'
     if not table_exists(meta_t) or not table_exists(items_t):
