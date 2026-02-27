@@ -15,7 +15,7 @@ user_roles %}
 
     <div class="mt-4" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
 
-        {% if is_admin or is_bg %}
+        {% if is_admin or is_bg or is_accounts %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_contract') }}'"
             style="cursor: pointer;">
             <h4>1. Input a contract</h4>
