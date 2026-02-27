@@ -1036,7 +1036,8 @@ def display_contract_detail(contract_id):
         flash('Contract not found', 'error')
         return redirect(url_for('contracts.display_contract_list'))
     items = execute_query("SELECT * FROM contract_items WHERE contract_id = %s ORDER BY item_id", (contract_id,), fetch=True) or []
-    return render_template(TP + 'display_detail.html', contract=meta, items=items,
+    store_value = sum((i.get('total_price') or 0) for i in items)
+    return render_template(TP + 'display_detail.html', contract=meta, items=items, store_value=store_value,
                            show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 

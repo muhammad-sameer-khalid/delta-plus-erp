@@ -25,6 +25,10 @@
                 <td>{{ contract.total_value|commas }}</td>
             </tr>
             <tr>
+                <td><strong>Store Value (Rs.)</strong></td>
+                <td>{{ store_value|commas if store_value else '-' }}</td>
+            </tr>
+            <tr>
                 <td><strong>Delivery Deadline</strong></td>
                 <td>{{ contract.delivery_deadline or '-' }}</td>
             </tr>
