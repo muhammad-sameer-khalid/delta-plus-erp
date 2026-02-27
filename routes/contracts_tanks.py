@@ -95,6 +95,11 @@ def _run_contracts_startup_checks_for_line(line=None):
             (gm_role, msg, 'contract_bg_expiry', c['contract_id']),
             commit=True
         )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('data_entry_bg', msg, 'contract_bg_expiry', c['contract_id']),
+            commit=True
+        )
 
     # 2b. BG expiring soon (within 30 days): use the LATEST date
     upcoming_limit = today + timedelta(days=30)
@@ -110,6 +115,11 @@ def _run_contracts_startup_checks_for_line(line=None):
         execute_query(
             "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
             (gm_role, msg, 'contract_bg_expiry', c['contract_id']),
+            commit=True
+        )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('data_entry_bg', msg, 'contract_bg_expiry', c['contract_id']),
             commit=True
         )
 
@@ -192,6 +202,12 @@ def _run_contracts_startup_checks_for_line(line=None):
         execute_query(
             "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
             ('contracts_data_entry', msg, 'contract_bg_release_pending', c['contract_id']),
+            commit=True
+        )
+        # Notify data_entry_bg
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('data_entry_bg', msg, 'contract_bg_release_pending', c['contract_id']),
             commit=True
         )
 
