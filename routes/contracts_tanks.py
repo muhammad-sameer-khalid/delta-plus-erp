@@ -291,7 +291,6 @@ def input_contract():
             total_value = 0
         delivery_deadline = request.form.get('delivery_deadline', '').strip()
         department = (request.form.get('department') or '').strip()
-        remarks = (request.form.get('remarks') or '').strip() or None
 
         if not contract_no or not contract_date or not delivery_deadline or not department:
             flash('All required fields marked with * must be filled.', 'error')
@@ -308,10 +307,10 @@ def input_contract():
         execute_query("""
             INSERT INTO contracts_metadata
             (contract_no, contract_date, contract_type, total_value, delivery_deadline,
-             department, remarks, contract_status, amount_given, amount_balance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
+             department, contract_status, amount_given, amount_balance)
+            VALUES (%s, %s, %s, %s, %s, %s, 'active', 0, %s)
         """, (contract_no, contract_date, contract_type, total_value, delivery_deadline,
-              department, remarks, total_value), commit=True)
+              department, total_value), commit=True)
         flash('Contract saved. Use "Input BG Info" to add bank/BG details, and "Input items" to add items.', 'success')
         return redirect(url_for('contracts_tanks.contracts_dashboard'))
 
@@ -364,14 +363,16 @@ def input_bg_info(contract_id):
             flash('Beneficiary, Bank Name and Expected BG Release Date are required.', 'error')
             return redirect(url_for('contracts_tanks.input_bg_info', contract_id=contract_id))
 
+        remarks = (request.form.get('remarks') or '').strip() or None
         execute_query("""
             UPDATE contracts_metadata
             SET beneficiary=%s, bank_name=%s, expected_bg_release_date=%s,
-                bg_number=%s, bg_issue_date=%s, bg_amount=%s, bg_expiry_date=%s, bg_type=%s
+                bg_number=%s, bg_issue_date=%s, bg_amount=%s, bg_expiry_date=%s, bg_type=%s,
+                remarks=%s
             WHERE contract_id=%s
         """, (beneficiary, bank_name, expected_bg_release_date,
                bg_number, bg_issue_date, bg_amount or 0, bg_expiry_date, bg_type,
-               contract_id), commit=True)
+               remarks, contract_id), commit=True)
         flash('BG info saved successfully.', 'success')
         return redirect(url_for('contracts_tanks.contracts_dashboard'))
 

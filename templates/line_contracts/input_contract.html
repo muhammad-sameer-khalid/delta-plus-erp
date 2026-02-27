@@ -37,12 +37,6 @@
             <label for="department" class="form-label required">Department</label>
             <input type="text" id="department" name="department" class="form-input" required placeholder="DGP (Army)">
         </div>
-        <div class="form-group">
-            <label for="remarks" class="form-label">Remarks</label>
-            <textarea id="remarks" name="remarks" class="form-input" rows="3"
-                placeholder="Additional notes..."></textarea>
-        </div>
-
         <div class="btn-group mt-4">
             <button type="submit" class="btn btn-primary">Save and add items</button>
             <a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary">Cancel</a>
