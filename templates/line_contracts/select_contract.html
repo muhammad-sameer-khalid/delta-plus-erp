@@ -62,6 +62,9 @@
                         {% elif mode == 'renew_bg' %}
                         <a href="{{ url_for(bp ~ '.renew_bg_edit', contract_id=c.contract_id) }}"
                             class="btn btn-primary">Select</a>
+                        {% elif mode == 'input_bg_info' %}
+                        <a href="{{ url_for(bp ~ '.input_bg_info', contract_id=c.contract_id) }}"
+                            class="btn btn-primary">Select</a>
                         {% elif mode == 'input_items' %}
                         <a href="{{ url_for(bp ~ '.input_contract_items', contract_id=c.contract_id) }}"
                             class="btn btn-primary">Select</a>
@@ -103,6 +106,7 @@
                 if (mode === 'payment') return contractsPathPrefix + '/input-payment/' + contractId;
                 if (mode === 'invoice') return contractsPathPrefix + '/input-invoice/' + contractId;
                 if (mode === 'renew_bg') return contractsPathPrefix + '/renew-bg/' + contractId;
+                if (mode === 'input_bg_info') return contractsPathPrefix + '/input-bg-info/' + contractId;
                 if (mode === 'input_items') return contractsPathPrefix + '/input-contract-items/' + contractId;
                 if (mode === 'edit_contract') return contractsPathPrefix + '/edit-contract/' + contractId;
                 if (mode === 'edit_contract_items') return contractsPathPrefix + '/edit-contract-items/' + contractId;

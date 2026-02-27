@@ -276,7 +276,6 @@ def contracts_dashboard():
     return render_template(TP + 'dashboard.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
 
 
-# ========== 1. Input a contract ==========
 @bp.route('/input-contract', methods=['GET', 'POST'])
 @_contracts_access_required
 def input_contract():
@@ -291,15 +290,59 @@ def input_contract():
         except Exception:
             total_value = 0
         delivery_deadline = request.form.get('delivery_deadline', '').strip()
-        
-        # New base fields
         department = (request.form.get('department') or '').strip()
+        remarks = (request.form.get('remarks') or '').strip() or None
+
+        if not contract_no or not contract_date or not delivery_deadline or not department:
+            flash('All required fields marked with * must be filled.', 'error')
+            return redirect(url_for('contracts_tanks.input_contract'))
+        if total_value <= 0:
+            flash('Total Value must be greater than 0', 'error')
+            return redirect(url_for('contracts_tanks.input_contract'))
+
+        existing = execute_query("SELECT 1 FROM contracts_metadata WHERE contract_no = %s", (contract_no,), fetch_one=True)
+        if existing:
+            flash(f'Contract number "{contract_no}" already exists', 'error')
+            return redirect(url_for('contracts_tanks.input_contract'))
+
+        execute_query("""
+            INSERT INTO contracts_metadata
+            (contract_no, contract_date, contract_type, total_value, delivery_deadline,
+             department, remarks, contract_status, amount_given, amount_balance)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
+        """, (contract_no, contract_date, contract_type, total_value, delivery_deadline,
+              department, remarks, total_value), commit=True)
+        flash('Contract saved. Use "Input BG Info" to add bank/BG details, and "Input items" to add items.', 'success')
+        return redirect(url_for('contracts_tanks.contracts_dashboard'))
+
+    return render_template(TP + 'input_contract.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+# ========== Input BG Info ==========
+@bp.route('/input-bg-info')
+@_contracts_access_required
+def input_bg_info_list():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query("SELECT * FROM contracts_metadata WHERE contract_no LIKE %s ORDER BY contract_no", (f'%{q}%',), fetch=True) or []
+    else:
+        contracts = execute_query("SELECT * FROM contracts_metadata ORDER BY contract_no", fetch=True) or []
+    return render_template(TP + 'select_contract.html', contracts=contracts, search_q=q, mode='input_bg_info',
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+
+
+@bp.route('/input-bg-info/<int:contract_id>', methods=['GET', 'POST'])
+@_contracts_access_required
+def input_bg_info(contract_id):
+    meta = execute_query("SELECT * FROM contracts_metadata WHERE contract_id = %s", (contract_id,), fetch_one=True)
+    if not meta:
+        flash('Contract not found', 'error')
+        return redirect(url_for('contracts_tanks.input_bg_info_list'))
+
+    if request.method == 'POST':
         beneficiary = (request.form.get('beneficiary') or '').strip()
         bank_name = (request.form.get('bank_name') or '').strip()
         expected_bg_release_date = request.form.get('expected_bg_release_date', '').strip() or None
-        remarks = (request.form.get('remarks') or '').strip() or None
-
-        # BG fields
         bg_number = (request.form.get('bg_number') or '').strip() or None
         bg_issue_date = (request.form.get('bg_issue_date') or '').strip() or None
         try:
@@ -307,11 +350,6 @@ def input_contract():
         except Exception:
             bg_amount = 0
         bg_expiry_date = (request.form.get('bg_expiry_date') or '').strip() or None
-        
-        # CDR fields
-        cdr_no = (request.form.get('cdr_no') or '').strip() or None
-
-        # Build bg_type from radio selection + optional cash margin %
         bg_type_radio = (request.form.get('bg_type_radio') or '').strip()
         if bg_type_radio == 'Cash Margin':
             try:
@@ -322,41 +360,23 @@ def input_contract():
         else:
             bg_type = bg_type_radio or None
 
-        # Validation
-        if not contract_no or not contract_date or not delivery_deadline or not department or not beneficiary or not bank_name or not expected_bg_release_date:
-            flash('All required fields marked with * must be filled.', 'error')
-            return redirect(url_for('contracts_tanks.input_contract'))
-        
-        if total_value <= 0:
-            flash('Total Value must be greater than 0', 'error')
-            return redirect(url_for('contracts_tanks.input_contract'))
+        if not beneficiary or not bank_name or not expected_bg_release_date:
+            flash('Beneficiary, Bank Name and Expected BG Release Date are required.', 'error')
+            return redirect(url_for('contracts_tanks.input_bg_info', contract_id=contract_id))
 
-        # BG vs CDR validation
-        if not bg_number:
-            flash('BG/CDR Number must be provided.', 'error')
-            return redirect(url_for('contracts_tanks.input_contract'))
-
-        existing = execute_query("SELECT 1 FROM contracts_metadata WHERE contract_no = %s", (contract_no,), fetch_one=True)
-        if existing:
-            flash(f'Contract number "{contract_no}" already exists', 'error')
-            return redirect(url_for('contracts_tanks.input_contract'))
-
-        # Save directly to DB
         execute_query("""
-            INSERT INTO contracts_metadata
-            (contract_no, contract_date, contract_type, total_value, delivery_deadline, 
-             bg_number, bg_issue_date, bg_amount, bg_expiry_date, bg_type, 
-             department, beneficiary, bank_name, expected_bg_release_date, remarks,
-             contract_status, amount_given, amount_balance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
-        """, (contract_no, contract_date, contract_type, total_value, delivery_deadline, 
-              bg_number, bg_issue_date, bg_amount or 0, bg_expiry_date, bg_type, 
-              department, beneficiary, bank_name, expected_bg_release_date, remarks,
-              total_value), commit=True)
-        flash('Contract saved. Use "Input items for a contract" to add items.', 'success')
+            UPDATE contracts_metadata
+            SET beneficiary=%s, bank_name=%s, expected_bg_release_date=%s,
+                bg_number=%s, bg_issue_date=%s, bg_amount=%s, bg_expiry_date=%s, bg_type=%s
+            WHERE contract_id=%s
+        """, (beneficiary, bank_name, expected_bg_release_date,
+               bg_number, bg_issue_date, bg_amount or 0, bg_expiry_date, bg_type,
+               contract_id), commit=True)
+        flash('BG info saved successfully.', 'success')
         return redirect(url_for('contracts_tanks.contracts_dashboard'))
 
-    return render_template(TP + 'input_contract.html', show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
+    return render_template(TP + 'input_bg_info.html', contract=meta,
+                           show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
 @bp.route('/input-contract-items/<int:contract_id>', methods=['GET', 'POST'])

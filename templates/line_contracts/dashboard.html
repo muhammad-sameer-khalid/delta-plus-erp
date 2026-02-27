@@ -21,6 +21,11 @@ user_roles %}
             <h4>1. Input a contract</h4>
             <p>Create new contract (metadata only)</p>
         </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.input_bg_info_list') }}'"
+            style="cursor: pointer;">
+            <h4>2. Input BG Info</h4>
+            <p>Enter beneficiary, bank and security deposit details for a contract</p>
+        </div>
         {% endif %}
 
         {% if is_admin or is_accounts %}
