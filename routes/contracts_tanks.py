@@ -1181,7 +1181,7 @@ def edit_contract(contract_id):
         final_crv_no = (request.form.get('final_crv_no') or '').strip() or None
         final_crv_date = (request.form.get('final_crv_date') or '').strip() or None
 
-        if not contract_no or not contract_date or not delivery_deadline or not department or not beneficiary or not bank_name:
+        if not contract_no or not contract_date or not delivery_deadline or not department:
             flash('All required fields marked with * must be filled.', 'error')
             return redirect(url_for(f'{BP}.edit_contract', contract_id=contract_id))
         if total_value <= 0:
