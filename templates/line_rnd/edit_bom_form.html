@@ -8,19 +8,36 @@
         <div class="table-container mt-4">
             <table class="data-table">
                 <thead>
-                    <tr><th style="width:5%;">#</th><th style="width:15%;">Designator</th><th style="width:15%;">Part Type</th><th style="width:15%;">Part Value</th><th style="width:25%;">Description</th><th style="width:15%;">Footprint</th><th style="width:8%;">Qty</th><th style="width:7%;">Action</th></tr>
+                    <tr>
+                        <th style="width:5%;">#</th>
+                        <th style="width:15%;">Designator</th>
+                        <th style="width:15%;">Part Type</th>
+                        <th style="width:15%;">Part Value</th>
+                        <th style="width:25%;">Description</th>
+                        <th style="width:15%;">Footprint</th>
+                        <th style="width:8%;">Qty</th>
+                        <th style="width:7%;">Action</th>
+                    </tr>
                 </thead>
                 <tbody id="componentsTable">
                     {% for component in components %}
                     <tr class="component-row">
                         <td>{{ loop.index }}</td>
-                        <td><input type="text" name="designator_{{ loop.index0 }}" value="{{ component.designator }}" class="form-input" placeholder="e.g., R1, C2"></td>
-                        <td><input type="text" name="part_type_{{ loop.index0 }}" value="{{ component.part_type }}" class="form-input" placeholder="e.g., Resistor"></td>
-                        <td><input type="text" name="part_value_{{ loop.index0 }}" value="{{ component.part_value }}" class="form-input" placeholder="e.g., 10kΩ"></td>
-                        <td><input type="text" name="part_description_{{ loop.index0 }}" value="{{ component.part_description }}" class="form-input" placeholder="Description"></td>
-                        <td><input type="text" name="footprint_{{ loop.index0 }}" value="{{ component.footprint }}" class="form-input" placeholder="e.g., 0805"></td>
-                        <td><input type="number" name="qty_{{ loop.index0 }}" value="{{ component.qty }}" class="form-input" min="1" required></td>
-                        <td><button type="button" onclick="deleteRow(this)" class="btn btn-danger" style="padding: 0.4rem 0.8rem;">🗑️</button></td>
+                        <td><input type="text" name="designator_{{ loop.index0 }}" value="{{ component.designator }}"
+                                class="form-input" placeholder="e.g., R1, C2"></td>
+                        <td><input type="text" name="part_type_{{ loop.index0 }}" value="{{ component.part_type }}"
+                                class="form-input" placeholder="e.g., Resistor"></td>
+                        <td><input type="text" name="part_value_{{ loop.index0 }}" value="{{ component.part_value }}"
+                                class="form-input" placeholder="e.g., 10kΩ"></td>
+                        <td><input type="text" name="part_description_{{ loop.index0 }}"
+                                value="{{ component.part_description }}" class="form-input" placeholder="Description">
+                        </td>
+                        <td><input type="text" name="footprint_{{ loop.index0 }}" value="{{ component.footprint }}"
+                                class="form-input" placeholder="e.g., 0805"></td>
+                        <td><input type="number" name="qty_{{ loop.index0 }}" value="{{ component.qty }}"
+                                class="form-input" min="1" required></td>
+                        <td><button type="button" onclick="deleteRow(this)" class="btn btn-danger"
+                                style="padding: 0.4rem 0.8rem;">🗑️</button></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -32,30 +49,67 @@
             <a href="{{ url_for(bp ~ '.edit_bom') }}" class="btn btn-secondary">← Cancel</a>
         </div>
     </form>
-    <div class="mt-4"><a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary">← {{ line|capitalize }} Dashboard</a></div>
+    <div class="mt-4"><a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary">← {{ line|capitalize }}
+            Dashboard</a></div>
 </div>
 <script>
-let rowCount = {{ components|length }};
-function addRow() {
-    const table = document.getElementById('componentsTable');
-    const newRow = table.insertRow();
-    newRow.className = 'component-row';
-    newRow.innerHTML = `<td>${table.rows.length + 1}</td><td><input type="text" name="designator_${rowCount}" class="form-input" placeholder="e.g., R1, C2"></td><td><input type="text" name="part_type_${rowCount}" class="form-input" placeholder="e.g., Resistor"></td><td><input type="text" name="part_value_${rowCount}" class="form-input" placeholder="e.g., 10kΩ"></td><td><input type="text" name="part_description_${rowCount}" class="form-input" placeholder="Description"></td><td><input type="text" name="footprint_${rowCount}" class="form-input" placeholder="e.g., 0805"></td><td><input type="number" name="qty_${rowCount}" class="form-input" min="1" value="1" required></td><td><button type="button" onclick="deleteRow(this)" class="btn btn-danger" style="padding: 0.4rem 0.8rem;">🗑️</button></td>`;
-    rowCount++;
-    updateRowNumbers();
-}
-function deleteRow(button) { if (confirm('Are you sure you want to delete this component?')) { const row = button.closest('tr'); row.remove(); updateRowNumbers(); renumberInputs(); } }
-function updateRowNumbers() { const table = document.getElementById('componentsTable'); const rows = table.getElementsByTagName('tr'); for (let i = 0; i < rows.length; i++) { rows[i].cells[0].textContent = i + 1; } }
-function renumberInputs() { const table = document.getElementById('componentsTable'); const rows = table.getElementsByTagName('tr'); for (let i = 0; i < rows.length; i++) { const inputs = rows[i].getElementsByTagName('input'); for (let j = 0; j < inputs.length; j++) { const input = inputs[j]; const name = input.name.split('_')[0]; input.name = `${name}_${i}`; } } rowCount = rows.length; }
+    let rowCount = {{ components| length }};
+    function addRow() {
+        const table = document.getElementById('componentsTable');
+        const newRow = table.insertRow();
+        newRow.className = 'component-row';
+        newRow.innerHTML = `<td>${table.rows.length + 1}</td><td><input type="text" name="designator_${rowCount}" class="form-input" placeholder="e.g., R1, C2"></td><td><input type="text" name="part_type_${rowCount}" class="form-input" placeholder="e.g., Resistor"></td><td><input type="text" name="part_value_${rowCount}" class="form-input" placeholder="e.g., 10kΩ"></td><td><input type="text" name="part_description_${rowCount}" class="form-input" placeholder="Description"></td><td><input type="text" name="footprint_${rowCount}" class="form-input" placeholder="e.g., 0805"></td><td><input type="number" name="qty_${rowCount}" class="form-input" min="1" value="1" required></td><td><button type="button" onclick="deleteRow(this)" class="btn btn-danger" style="padding: 0.4rem 0.8rem;">🗑️</button></td>`;
+        rowCount++;
+        updateRowNumbers();
+    }
+    function deleteRow(button) { if (confirm('Are you sure you want to delete this component?')) { const row = button.closest('tr'); row.remove(); updateRowNumbers(); renumberInputs(); } }
+    function updateRowNumbers() { const table = document.getElementById('componentsTable'); const rows = table.getElementsByTagName('tr'); for (let i = 0; i < rows.length; i++) { rows[i].cells[0].textContent = i + 1; } }
+    function renumberInputs() { const table = document.getElementById('componentsTable'); const rows = table.getElementsByTagName('tr'); for (let i = 0; i < rows.length; i++) { const inputs = rows[i].getElementsByTagName('input'); for (let j = 0; j < inputs.length; j++) { const input = inputs[j]; const name = input.name.split('_')[0]; input.name = `${name}_${i}`; } } rowCount = rows.length; }
 </script>
 <style>
-.component-row td { padding: 0.5rem; vertical-align: middle; }
-.component-row input { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
-.table-container { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
-.data-table { width: 100%; border-collapse: collapse; background: white; }
-.data-table thead { background: #f8f9fa; position: sticky; top: 0; }
-.data-table th { padding: 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd; }
-.data-table td { border-bottom: 1px solid #eee; }
-.data-table tbody tr:hover { background: #f8f9fa; }
+    .component-row td {
+        padding: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .component-row input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+    .data-table thead {
+        background: #f8f9fa;
+        position: sticky;
+        top: 0;
+    }
+
+    .data-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .data-table td {
+        border-bottom: 1px solid #eee;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f8f9fa;
+    }
 </style>
 {% endblock %}
