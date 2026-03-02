@@ -97,6 +97,9 @@
 
             container.appendChild(row);
             count++;
+            // Auto-focus the first input (Item name) of the new row
+            var firstInput = row.querySelector('input');
+            if (firstInput) firstInput.focus();
         };
     })();
 </script>

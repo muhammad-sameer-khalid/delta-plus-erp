@@ -116,6 +116,9 @@
         rowCount++;
         updateRowNumbers();
         renumberInputs();
+        // Auto-focus the first input of the new row
+        var firstInput = newRow.querySelector('input');
+        if (firstInput) firstInput.focus();
     }
 
     function openSlotModal() {
