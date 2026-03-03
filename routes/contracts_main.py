@@ -53,6 +53,17 @@ def view_all_bgs():
     
     return render_template('contracts/display_all_bgs.html', contracts=contracts)
 
+
+@bp.route('/pending-bills')
+@login_required
+def view_pending_bills():
+    """View all contracts (all lines) where some items have invoice_no but no payment (net_amount)."""
+    if not can_access_contracts(session.get('user_email')):
+        flash('You do not have permission to access Contracts', 'error')
+        return redirect(url_for('dashboard'))
+    
+    return render_template('contracts/pending_bills.html')
+
 @bp.route('/api/search-all')
 @login_required
 def api_search_all():
@@ -61,56 +72,78 @@ def api_search_all():
         return jsonify({'contracts': []})
 
     q = (request.args.get('q') or '').strip()
+    status = (request.args.get('status') or 'all').strip().lower()
+
+    # Map incoming status filter to DB values
+    STATUS_MAP = {
+        'active': 'active',
+        'completed': 'completed',
+        'warranty': 'warranty period',
+        'warranty period': 'warranty period',
+        'all': None
+    }
+    status_value = STATUS_MAP.get(status, None)
     
     # We need to query three tables: contracts_metadata, contracts_metadata_biomedical, contracts_metadata_battery
     # And maybe indicate which line they belong to.
     
-    # Helper to construct query for one table
-    def get_query(table, line_name):
-        base = f"SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, '{line_name}' as line FROM {table}"
-        if q:
-            base += f" WHERE contract_no LIKE %s"
-        return base
+    tables = [
+        ('contracts_metadata', 'Tanks'),
+        ('contracts_metadata_biomedical', 'Biomedical'),
+        ('contracts_metadata_battery', 'Battery'),
+    ]
 
-    # Params
+    queries = []
     params = []
+
     if q:
         like_q = f'%{q}%'
-        params = [like_q, like_q, like_q]
-    
-    # Combine queries
-    query = f"""
-        ({get_query('contracts_metadata', 'Tanks')})
-        UNION ALL
-        ({get_query('contracts_metadata_biomedical', 'Biomedical')})
-        UNION ALL
-        ({get_query('contracts_metadata_battery', 'Battery')})
-        ORDER BY contract_no
-        LIMIT 50
-    """
-    
-    # If no query, we might want to return everything or just recent ones. 
-    # But usually predictive search needs a query. If empty, maybe show top 50 recent?
-    # The snippet above requires parameters if q is present.
-    # Let's adjust logic for empty q to just showing nothing or top 20 recent from each?
-    # User asked for "predictive search functionality", usually implies typing.
-    # If q is empty, let's return empty to avoid massive load, or maybe just recent.
-    # Let's stick to the search logic.
-    
-    if not q:
-        # Initial load or empty search: return top 20 from each to show something?
-        # Or just empty. Let's return empty for now, or maybe recent.
-        # Let's return recent 20 combined.
+        # Build search query with optional status filter
+        for table, line_name in tables:
+            base = (
+                f"SELECT contract_id, contract_no, contract_date, total_value, "
+                f"delivery_deadline, department, contract_status, '{line_name}' as line "
+                f"FROM {table}"
+            )
+            conditions = ["contract_no LIKE %s"]
+            params.append(like_q)
+
+            if status_value:
+                conditions.append("contract_status = %s")
+                params.append(status_value)
+
+            base += " WHERE " + " AND ".join(conditions)
+            queries.append(base)
+
         query = f"""
-            (SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 'Tanks' as line FROM contracts_metadata ORDER BY contract_id DESC LIMIT 20)
-            UNION ALL
-            (SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 'Biomedical' as line FROM contracts_metadata_biomedical ORDER BY contract_id DESC LIMIT 20)
-            UNION ALL
-            (SELECT contract_id, contract_no, contract_date, total_value, delivery_deadline, department, 'Battery' as line FROM contracts_metadata_battery ORDER BY contract_id DESC LIMIT 20)
+            ({') UNION ALL ('.join(queries)})
+            ORDER BY contract_no
+            LIMIT 50
+        """
+    else:
+        # Initial load or empty search: recent contracts with optional status filter
+        for table, line_name in tables:
+            base = (
+                f"SELECT contract_id, contract_no, contract_date, total_value, "
+                f"delivery_deadline, department, contract_status, '{line_name}' as line "
+                f"FROM {table}"
+            )
+            conditions = []
+            if status_value:
+                conditions.append("contract_status = %s")
+                params.append(status_value)
+
+            if conditions:
+                base += " WHERE " + " AND ".join(conditions)
+
+            base += " ORDER BY contract_id DESC LIMIT 20"
+            queries.append(base)
+
+        query = f"""
+            ({') UNION ALL ('.join(queries)})
             ORDER BY contract_id DESC
             LIMIT 50
         """
-        params = []
 
     results = execute_query(query, tuple(params), fetch=True) or []
     
@@ -121,4 +154,66 @@ def api_search_all():
         if r.get('delivery_deadline'):
             r['delivery_deadline'] = str(r['delivery_deadline'])
             
+    return jsonify({'contracts': results})
+
+
+@bp.route('/api/pending-bills')
+@login_required
+def api_pending_bills():
+    """List/search contracts across all lines with pending bills (invoice entered, payment not)."""
+    if not can_access_contracts(session.get('user_email')):
+        return jsonify({'contracts': []})
+
+    q = (request.args.get('q') or '').strip()
+
+    tables = [
+        ('contracts_metadata', 'contract_items', 'Tanks'),
+        ('contracts_metadata_biomedical', 'contract_items_biomedical', 'Biomedical'),
+        ('contracts_metadata_battery', 'contract_items_battery', 'Battery'),
+    ]
+
+    subqueries = []
+    params = []
+
+    for meta_t, items_t, line_name in tables:
+        base = (
+            f"SELECT DISTINCT cm.contract_id, cm.contract_no, cm.contract_date, cm.total_value, "
+            f"cm.delivery_deadline, cm.department, '{line_name}' AS line "
+            f"FROM {meta_t} cm "
+            f"JOIN {items_t} ci ON ci.contract_id = cm.contract_id "
+            f"WHERE cm.contract_status != 'completed' "
+            f"AND (ci.invoice_no IS NOT NULL AND ci.invoice_no != '') "
+            f"AND (ci.net_amount IS NULL OR ci.net_amount = 0)"
+        )
+
+        if q:
+            like_q = f"%{q}%"
+            base += (
+                " AND ("
+                "cm.contract_no LIKE %s "
+                "OR ci.invoice_no LIKE %s "
+                "OR CAST(cm.total_value AS CHAR) LIKE %s "
+                "OR CAST(ci.net_amount AS CHAR) LIKE %s"
+                ")"
+            )
+            params.extend([like_q, like_q, like_q, like_q])
+
+        subqueries.append(base)
+
+    if not subqueries:
+        return jsonify({'contracts': []})
+
+    query = f"""
+        ({') UNION ALL ('.join(subqueries)})
+        ORDER BY contract_no
+    """
+
+    results = execute_query(query, tuple(params), fetch=True) or []
+
+    for r in results:
+        if r.get('contract_date'):
+            r['contract_date'] = str(r['contract_date'])
+        if r.get('delivery_deadline'):
+            r['delivery_deadline'] = str(r['delivery_deadline'])
+
     return jsonify({'contracts': results})

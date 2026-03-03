@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Pending Bills - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Pending Bills</h1>
+        <a href="{{ url_for('contracts_main.dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Contracts
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4 no-hover">
+        <div class="card-body">
+            <div class="form-group mb-0 position-relative">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input type="text" id="pendingBillsSearch" class="form-input"
+                        placeholder="Search by invoice no., contract no., or amount..." autocomplete="off">
+                </div>
+                <small class="form-text text-muted mt-2">
+                    Shows contracts where at least one item has an invoice number but no payment (net amount) entered.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm no-hover">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Pending Bills</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="pendingBillsTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Production Line</th>
+                        <th>Department</th>
+                        <th>Contract No.</th>
+                        <th>Date</th>
+                        <th>Total Value</th>
+                        <th>Delivery Deadline</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingBillsBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            Type in the search box to filter pending-bill contracts...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('pendingBillsSearch');
+        const tableBody = document.getElementById('pendingBillsBody');
+        let debounceTimer;
+
+        function fetchPendingBills(query) {
+            const params = new URLSearchParams();
+            params.append('q', query || '');
+
+            fetch(`{{ url_for('contracts_main.api_pending_bills') }}?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = '';
+
+                    if (!data.contracts || data.contracts.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No pending-bill contracts found</td></tr>';
+                        return;
+                    }
+
+                    data.contracts.forEach(c => {
+                        let viewUrl = '#';
+                        if (c.line === 'Tanks') {
+                            viewUrl = `{{ url_for('contracts_tanks.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        } else if (c.line === 'Biomedical') {
+                            viewUrl = `{{ url_for('contracts_biomedical.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        } else if (c.line === 'Battery') {
+                            viewUrl = `{{ url_for('contracts_battery.display_contract_detail', contract_id=0) }}`.replace('0', c.contract_id);
+                        }
+
+                        const row = `
+                            <tr>
+                                <td><span class="badge badge-${getBadgeColor(c.line)}">${c.line}</span></td>
+                                <td>${c.department || '-'}</td>
+                                <td class="font-weight-bold">${c.contract_no}</td>
+                                <td>${c.contract_date || '-'}</td>
+                                <td>${formatCurrency(c.total_value)}</td>
+                                <td>${c.delivery_deadline || '-'}</td>
+                                <td>
+                                    <a href="${viewUrl}" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching pending bills:', err);
+                    tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading data</td></tr>';
+                });
+        }
+
+        function getBadgeColor(line) {
+            if (line === 'Tanks') return 'primary';
+            if (line === 'Biomedical') return 'success';
+            if (line === 'Battery') return 'warning';
+            return 'secondary';
+        }
+
+        function formatCurrency(val) {
+            if (!val) return '0.00';
+            return parseFloat(val).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Initial load: show all pending-bill contracts
+        fetchPendingBills('');
+
+        searchInput.addEventListener('input', function (e) {
+            const val = e.target.value.trim();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchPendingBills(val);
+            }, 300);
+        });
+    });
+</script>
+{% endblock %}
+

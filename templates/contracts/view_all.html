@@ -24,6 +24,22 @@
                 <small class="form-text text-muted mt-2">Search across Tanks, Biomedical, and Battery
                     departments.</small>
             </div>
+            <div class="mt-3">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Filter by contract status">
+                    <button type="button" class="btn btn-secondary contract-status-filter" data-status="all">
+                        All
+                    </button>
+                    <button type="button" class="btn btn-secondary contract-status-filter active" data-status="active">
+                        Active
+                    </button>
+                    <button type="button" class="btn btn-secondary contract-status-filter" data-status="warranty">
+                        Warranty Period
+                    </button>
+                    <button type="button" class="btn btn-secondary contract-status-filter" data-status="completed">
+                        Completed
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -41,12 +57,13 @@
                         <th>Date</th>
                         <th>Total Value</th>
                         <th>Delivery Deadline</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="contractsBody">
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">Type in the search box to find contracts...
+                        <td colspan="8" class="text-center py-4 text-muted">Type in the search box to find contracts...
                         </td>
                     </tr>
                 </tbody>
@@ -59,16 +76,23 @@
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('contractSearch');
         const tableBody = document.getElementById('contractsBody');
+        const statusButtons = document.querySelectorAll('.contract-status-filter');
         let debounceTimer;
+        // Default filter: show only active contracts
+        let currentStatus = 'active';
 
         function fetchContracts(query) {
-            fetch(`{{ url_for('contracts_main.api_search_all') }}?q=${encodeURIComponent(query)}`)
+            const params = new URLSearchParams();
+            params.append('q', query || '');
+            params.append('status', currentStatus);
+
+            fetch(`{{ url_for('contracts_main.api_search_all') }}?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
                     tableBody.innerHTML = '';
 
                     if (!data.contracts || data.contracts.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No contracts found</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No contracts found</td></tr>';
                         return;
                     }
 
@@ -91,6 +115,7 @@
                             <td>${c.contract_date || '-'}</td>
                             <td>${formatCurrency(c.total_value)}</td>
                             <td>${c.delivery_deadline || '-'}</td>
+                            <td>${(c.contract_status || '-')}</td>
                             <td>
                                 <a href="${viewUrl}" class="btn btn-sm btn-outline-primary">
                                     View Details
@@ -131,6 +156,34 @@
             debounceTimer = setTimeout(() => {
                 fetchContracts(val);
             }, 300);
+        });
+
+        // Helper to update button colors based on active state
+        function updateStatusButtonStyles() {
+            statusButtons.forEach(b => {
+                if (b.classList.contains('active')) {
+                    b.classList.remove('btn-secondary');
+                    b.classList.add('btn-primary');
+                } else {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-secondary');
+                }
+            });
+        }
+
+        // Ensure initial styles reflect default active button
+        updateStatusButtonStyles();
+
+        // Status filter buttons
+        statusButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                statusButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                updateStatusButtonStyles();
+                currentStatus = this.getAttribute('data-status') || 'all';
+                const val = searchInput.value.trim();
+                fetchContracts(val);
+            });
         });
     });
 </script>

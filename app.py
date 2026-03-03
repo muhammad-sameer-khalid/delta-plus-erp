@@ -87,6 +87,8 @@ def logout():
 @role_required('director', 'general manager', 'gm logistics')
 def admin():
     """Admin page for role management"""
+    from database import execute_query
+
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         role = request.form.get('role', '').strip()
@@ -95,30 +97,53 @@ def admin():
         if not email or not role:
             flash('Email and role are required', 'error')
         else:
-            # Check if role already exists
+            # Check if role already exists for this user
             user_roles = get_user_roles(email)
-            
-            if role in user_roles:
-                # Remove role
-                success, message = remove_user_role(email, role)
-                flash(message, 'success' if success else 'error')
+
+            # If user already exists in users table
+            user_check = execute_query(
+                "SELECT COUNT(*) as count FROM users WHERE email = %s",
+                (email,),
+                fetch_one=True
+            ) or {'count': 0}
+
+            if user_check['count'] == 0:
+                # New user: create account first (with hashing)
+                user_password = password if password else 'password123'
+                created, msg = create_user(email, user_password)
+                if not created:
+                    flash(f'Failed to create user: {msg}', 'error')
+                else:
+                    flash(
+                        f'New user created with {"custom" if password else "default"} password',
+                        'info'
+                    )
             else:
-                # Add role (create user if doesn't exist)
-                from database import execute_query
-                user_check = execute_query(
-                    "SELECT COUNT(*) as count FROM users WHERE email = %s",
-                    (email,),
-                    fetch_one=True
-                )
-                
-                if user_check and user_check['count'] == 0:
-                    # Create user with provided password or default
-                    user_password = password if password else 'password123'
-                    create_user(email, user_password)
-                    flash(f'New user created with {"custom" if password else "default"} password', 'info')
-                
-                success, message = add_user_role(email, role)
-                flash(message, 'success' if success else 'error')
+                # Existing user: if admin supplied a password, update it
+                if password:
+                    # For existing users we currently do not change the password here
+                    # to avoid schema changes on live systems.
+                    flash('Password changes for existing users are not handled here without a schema update.', 'info')
+
+            # Now handle role add/remove only if user exists
+            user_check_after = execute_query(
+                "SELECT COUNT(*) as count FROM users WHERE email = %s",
+                (email,),
+                fetch_one=True
+            ) or {'count': 0}
+
+            if user_check_after['count'] == 0:
+                # No valid user row; skip role changes
+                pass
+            else:
+                if role in user_roles:
+                    # Remove role
+                    success, message = remove_user_role(email, role)
+                    flash(message, 'success' if success else 'error')
+                else:
+                    # Add role
+                    success, message = add_user_role(email, role)
+                    flash(message, 'success' if success else 'error')
     
     # Get all user roles
     user_roles_data = get_all_user_roles()
