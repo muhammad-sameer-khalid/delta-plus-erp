@@ -85,33 +85,43 @@
 </div>
 
 <script>
-    let componentCount = 1;
-
     function addComponent() {
-        componentCount++;
         const container = document.getElementById('componentsContainer');
+        const nextIdx = container.querySelectorAll('.component-row').length;
 
         const componentHtml = `
         <div class="component-row" style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9ACF59; position: relative;">
-            <button type="button" onclick="this.parentElement.remove()" 
+            <button type="button" onclick="this.parentElement.remove(); renumberInputs();" 
                     style="position: absolute; top: 1rem; right: 1rem; background: #e74c3c; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
                 ✕ Remove
             </button>
             
-            <h4 style="margin-bottom: 1rem;">Component ${componentCount}</h4>
+            <h4 class="component-title" style="margin-bottom: 1rem;">Component ${nextIdx + 1}</h4>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                <div class="form-group"><label class="form-label">Designator</label><input type="text" name="designator_${componentCount - 1}" class="form-input" placeholder="e.g., R1, C1, U1"></div>
-                <div class="form-group"><label class="form-label">Part Type</label><input type="text" name="part_type_${componentCount - 1}" class="form-input" placeholder="e.g., Resistor, Capacitor"></div>
-                <div class="form-group"><label class="form-label">Part Value</label><input type="text" name="part_value_${componentCount - 1}" class="form-input" placeholder="e.g., 10K, 100nF"></div>
-                <div class="form-group"><label class="form-label">Part Description</label><input type="text" name="part_description_${componentCount - 1}" class="form-input" placeholder="Description"></div>
-                <div class="form-group"><label class="form-label">Footprint</label><input type="text" name="footprint_${componentCount - 1}" class="form-input" placeholder="e.g., 0805, SOIC-8"></div>
-                <div class="form-group"><label class="form-label">Quantity</label><input type="number" name="qty_${componentCount - 1}" class="form-input" min="1" value="1"></div>
+                <div class="form-group"><label class="form-label">Designator</label><input type="text" name="designator_${nextIdx}" class="form-input" placeholder="e.g., R1, C1, U1"></div>
+                <div class="form-group"><label class="form-label">Part Type</label><input type="text" name="part_type_${nextIdx}" class="form-input" placeholder="e.g., Resistor, Capacitor"></div>
+                <div class="form-group"><label class="form-label">Part Value</label><input type="text" name="part_value_${nextIdx}" class="form-input" placeholder="e.g., 10K, 100nF"></div>
+                <div class="form-group"><label class="form-label">Part Description</label><input type="text" name="part_description_${nextIdx}" class="form-input" placeholder="Description"></div>
+                <div class="form-group"><label class="form-label">Footprint</label><input type="text" name="footprint_${nextIdx}" class="form-input" placeholder="e.g., 0805, SOIC-8"></div>
+                <div class="form-group"><label class="form-label">Quantity</label><input type="number" name="qty_${nextIdx}" class="form-input" min="1" value="1"></div>
             </div>
         </div>
     `;
 
         container.insertAdjacentHTML('beforeend', componentHtml);
+    }
+
+    function renumberInputs() {
+        const container = document.getElementById('componentsContainer');
+        const rows = container.querySelectorAll('.component-row');
+        rows.forEach((row, idx) => {
+            row.querySelector('.component-title').textContent = `Component ${idx + 1}`;
+            row.querySelectorAll('input').forEach(input => {
+                const baseName = input.name.replace(/_\d+$/, '');
+                input.name = `${baseName}_${idx}`;
+            });
+        });
     }
 </script>
 {% endblock %}

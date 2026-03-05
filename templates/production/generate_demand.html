@@ -365,11 +365,8 @@
         for (let i = 0; i < rows.length; i++) {
             const inputs = rows[i].querySelectorAll('input');
             inputs.forEach(input => {
-                const nameParts = input.name.split('_');
-                if (nameParts.length >= 2) {
-                    const fieldName = nameParts.slice(0, -1).join('_');
-                    input.name = `${fieldName}_${i}`;
-                }
+                const baseName = input.name.replace(/_\d+$/, '');
+                input.name = `${baseName}_${i}`;
             });
         }
 

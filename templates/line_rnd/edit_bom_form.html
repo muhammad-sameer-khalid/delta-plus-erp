@@ -152,8 +152,8 @@
             const inputs = rows[i].getElementsByTagName('input');
             for (let j = 0; j < inputs.length; j++) {
                 const input = inputs[j];
-                const name = input.name.split('_')[0];
-                input.name = `${name}_${i}`;
+                const baseName = input.name.replace(/_\d+$/, '');
+                input.name = `${baseName}_${i}`;
             }
         }
         rowCount = rows.length;
