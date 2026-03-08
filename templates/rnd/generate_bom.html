@@ -110,6 +110,8 @@
     `;
 
         container.insertAdjacentHTML('beforeend', componentHtml);
+        const newRow = container.lastElementChild;
+        newRow.querySelector('input[name^="designator_"]').focus();
     }
 
     function renumberInputs() {
