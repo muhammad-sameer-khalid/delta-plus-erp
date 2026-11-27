@@ -94,12 +94,27 @@ h6 {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.navbar-logo:hover,
+.navbar-logo:focus {
+    text-decoration: none;
+    opacity: 0.92;
 }
 
 .navbar-logo img {
     height: 40px;
     width: auto;
     object-fit: contain;
+    transition: transform var(--transition);
+}
+
+.navbar-logo:hover img {
+    transform: scale(1.04);
 }
 
 .navbar-logo-text {
@@ -108,6 +123,11 @@ h6 {
     color: var(--text-dark);
     font-family: Georgia, 'Times New Roman', serif;
     /* Fallback for Meriva */
+    transition: color var(--transition);
+}
+
+.navbar-logo:hover .navbar-logo-text {
+    color: var(--primary-dark);
 }
 
 .navbar-menu {

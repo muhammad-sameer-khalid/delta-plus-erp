@@ -15,10 +15,10 @@
     {% if session.get('user_email') %}
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-logo">
+            <a href="{{ url_for('dashboard') }}" class="navbar-logo" title="Select Production Line">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Delta Plus Logo">
                 <span class="navbar-logo-text">Delta Plus</span>
-            </div>
+            </a>
 
             <button class="navbar-toggle" aria-label="Toggle navigation">
                 <span></span>
@@ -138,10 +138,10 @@
     {% else %}
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-logo">
+            <a href="{{ url_for('login') }}" class="navbar-logo" title="Delta Plus ERP">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Delta Plus Logo">
                 <span class="navbar-logo-text">Delta Plus</span>
-            </div>
+            </a>
         </div>
     </nav>
     {% endif %}
