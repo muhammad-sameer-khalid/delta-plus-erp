@@ -22,9 +22,15 @@ def ensure_database_exists():
     target_db = Config.DB_CONFIG.get('database')
     if not target_db:
         return True
+
+    host = Config.DB_CONFIG.get('host', 'localhost')
+    if os.getenv('VERCEL') == '1' and host in ('localhost', '127.0.0.1'):
+        logger.warning("Running on Vercel with DB_HOST=localhost. Remote database environment variables need to be set in Vercel settings.")
+        return False
     
     server_config = {k: v for k, v in Config.DB_CONFIG.items() if k != 'database'}
     server_config['raise_on_warnings'] = False
+    server_config['connect_timeout'] = 3
     try:
         conn = mysql.connector.connect(**server_config)
         cursor = conn.cursor()
@@ -40,6 +46,7 @@ def ensure_database_exists():
             fallback_config = dict(server_config)
             fallback_config['database'] = 'test'
             fallback_config['raise_on_warnings'] = False
+            fallback_config['connect_timeout'] = 3
             conn = mysql.connector.connect(**fallback_config)
             cursor = conn.cursor()
             cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{target_db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
@@ -54,8 +61,13 @@ def ensure_database_exists():
 def init_connection_pool():
     """Initialize MySQL connection pool with retry logic and auto-database creation"""
     global connection_pool
-    max_retries = 3
-    retry_delay = 2  # seconds
+    max_retries = 2
+    retry_delay = 1  # seconds
+
+    host = Config.DB_CONFIG.get('host', 'localhost')
+    if os.getenv('VERCEL') == '1' and host in ('localhost', '127.0.0.1'):
+        logger.warning("Vercel deployment detected without DB_HOST set in environment variables.")
+        return False
 
     # Ensure database exists before attempting to open pooled connections
     try:
@@ -230,6 +242,10 @@ def init_database():
     ensure_database_exists()
     if connection_pool is None:
         init_connection_pool()
+    
+    if connection_pool is None:
+        logger.warning("Database connection pool could not be initialized. Schema initialization deferred.")
+        return
     
     # Check if 'users' table exists; if not, create all tables and seed admin
     if not table_exists('users'):

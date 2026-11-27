@@ -7,6 +7,8 @@ load_dotenv()
 class Config:
     """Application configuration class"""
     
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
     # Flask configuration
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     
@@ -20,20 +22,37 @@ class Config:
         'user': os.getenv('DB_USER', 'root'),
         'password': os.getenv('DB_PASSWORD', ''),
         'database': os.getenv('DB_NAME', 'delta_plus_erp'),
+        'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', 4)),
         'autocommit': False,
-        'raise_on_warnings': True
+        'raise_on_warnings': False
     }
 
     if use_ssl:
         DB_CONFIG['ssl_disabled'] = False
+        
+        # Check explicit CA or standard Linux CA bundle locations (AWS Lambda/Vercel)
+        default_ca_paths = [
+            '/etc/pki/tls/certs/ca-bundle.crt',      # Amazon Linux 2 / RHEL (AWS Lambda & Vercel)
+            '/etc/ssl/certs/ca-certificates.crt',    # Debian / Ubuntu
+            '/etc/ssl/cert.pem',                     # Alpine / macOS
+        ]
+        found_ca = None
         ssl_ca = os.getenv('DB_SSL_CA')
         if ssl_ca and os.path.exists(ssl_ca):
-            DB_CONFIG['ssl_ca'] = ssl_ca
-            DB_CONFIG['ssl_verify_cert'] = True
+            found_ca = ssl_ca
         else:
-            # TiDB Cloud Serverless standard TLS
-            ssl_verify = os.getenv('DB_SSL_VERIFY', 'true').lower() in ('true', '1', 'yes')
-            DB_CONFIG['ssl_verify_cert'] = ssl_verify
+            for p in default_ca_paths:
+                if os.path.exists(p):
+                    found_ca = p
+                    break
+        
+        if found_ca:
+            DB_CONFIG['ssl_ca'] = found_ca
+            DB_CONFIG['ssl_verify_cert'] = os.getenv('DB_SSL_VERIFY', 'true').lower() in ('true', '1', 'yes')
+        else:
+            # If no CA file is available on the filesystem, keep TLS encryption active
+            # while avoiding the 'SSL_CTX_set_default_verify_paths failed' crash
+            DB_CONFIG['ssl_verify_cert'] = False
     
     # Network configuration
     HOST = os.getenv('HOST', '0.0.0.0')

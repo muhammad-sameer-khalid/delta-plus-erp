@@ -17,8 +17,12 @@ import logging
 from datetime import datetime
 import os
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with explicit directory paths for serverless/WSGI compatibility
+app = Flask(
+    __name__,
+    template_folder=os.path.join(Config.BASE_DIR, 'templates'),
+    static_folder=os.path.join(Config.BASE_DIR, 'static')
+)
 app.config.from_object(Config)
 app.secret_key = Config.SECRET_KEY
 
@@ -68,6 +72,10 @@ def login():
             return redirect(url_for('dashboard'))
         else:
             flash(message, 'error')
+    else:
+        # If running on Vercel and DB_HOST is unconfigured, display helpful message
+        if os.getenv('VERCEL') == '1' and Config.DB_CONFIG.get('host') in ('localhost', '127.0.0.1'):
+            flash('Notice: Please configure your TiDB Cloud environment variables (DB_HOST, DB_USER, etc.) in your Vercel Project Settings.', 'info')
     
     return render_template('login.html')
 
@@ -960,34 +968,27 @@ except ImportError as e:
 
 # System readiness tracking for serverless & traditional deployments
 _system_ready = False
+_init_attempted = False
 
 def ensure_system_ready():
-    """Ensure database, schema, and connection pool are ready on startup or first request"""
-    global _system_ready
-    if not _system_ready:
+    """Ensure database, schema, and connection pool are ready on first request (non-blocking)"""
+    global _system_ready, _init_attempted
+    if not _system_ready and not _init_attempted:
+        _init_attempted = True
         try:
             from database import init_database
             init_database()
             _system_ready = True
         except Exception as e:
-            logger.error(f"Failed to auto-initialize system: {e}")
-
-# Try eager initialization on cold start (WSGI import)
-try:
-    ensure_system_ready()
-except Exception as e:
-    logger.warning(f"Startup initialization deferred to first request: {e}")
+            logger.error(f"Database auto-initialization notice: {e}")
 
 @app.before_request
 def check_daily_tasks():
-    # Guarantee database and schema are initialized on first HTTP request (zero-touch first run)
-    ensure_system_ready()
-
-    # Run daily checks (once per day)
-    # Avoid running on static files to save resources
+    # Only run on non-static page requests
     if request.endpoint and 'static' not in request.endpoint:
-        from daily_checks import run_daily_checks
+        ensure_system_ready()
         try:
+            from daily_checks import run_daily_checks
             run_daily_checks()
         except Exception as e:
             logger.error(f"Failed to run daily checks: {e}")

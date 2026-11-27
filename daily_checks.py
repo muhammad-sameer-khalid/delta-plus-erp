@@ -11,6 +11,10 @@ def run_daily_checks():
     If not, run them and update the database.
     """
     try:
+        from database import table_exists
+        if not table_exists('contracts_daily_check'):
+            return False
+            
         today = date.today()
         
         # Check last run date from global contracts_daily_check table
