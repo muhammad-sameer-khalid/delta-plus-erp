@@ -1,28 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Demand Notes - Delta Plus ERP{% endblock %}
+{% block title %}Import Demand Notes - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <div>
-            <h1>Demand Notes</h1>
-            <p>View and manage all demand notes</p>
+            <h1>Import Demand Notes</h1>
+            <p>View and manage all import demand notes</p>
         </div>
-        <a href="{{ url_for('production.production_dashboard') }}" class="btn btn-secondary">← Back to Production
-            Dashboard</a>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{{ url_for('production.generate_demand') }}" class="btn btn-primary">➕ Create Import Demand Note</a>
+            <a href="{{ url_for('production.production_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
     </div>
 
     {% if demands %}
     <!-- Search Box -->
     <div class="mt-4" style="max-width: 500px;">
         <input type="text" id="demandSearch" class="form-input"
-            placeholder="🔍 Search demands by number, PCB name, or contract..." data-search-target="demandsTable"
+            placeholder="🔍 Search import demands by number, department, demanded by..." data-search-target="demandsTable"
             data-search-type="table" style="padding: 0.75rem 1rem;">
     </div>
 
     <div class="table-container mt-4">
-        <table id="demandsTable">
+        <table id="demandsTable" class="data-table">
             <thead>
                 <tr>
                     <th>Demand No.</th>
@@ -44,14 +46,20 @@
                     <td>{{ demand.required_date }}</td>
                     <td>{{ demand.demanded_by }}</td>
                     <td>
-                        {% if demand.approved %}
-                        <span style="color: #27ae60; font-weight: 600;">✓ Approved</span>
+                        {% if demand.approval_status == 'declined' %}
+                        <span style="color: #e74c3c; font-weight: 600; background: #fee2e2; padding: 3px 8px; border-radius: 4px;">✗ Declined</span>
+                        {% elif demand.approved %}
+                        <span style="color: #27ae60; font-weight: 600; background: #dcfce7; padding: 3px 8px; border-radius: 4px;">✓ Approved</span>
+                        {% elif demand.approval_status == 'pending_director' %}
+                        <span style="color: #0284c7; font-weight: 600; background: #e0f2fe; padding: 3px 8px; border-radius: 4px;">⏳ Pending Director</span>
+                        {% elif demand.approval_status == 'pending_gm' %}
+                        <span style="color: #d97706; font-weight: 600; background: #fef3c7; padding: 3px 8px; border-radius: 4px;">⏳ Pending GM</span>
                         {% else %}
-                        <span style="color: #f39c12; font-weight: 600;">⏳ Pending</span>
+                        <span style="color: #4b5563; font-weight: 600; background: #f3f4f6; padding: 3px 8px; border-radius: 4px;">Draft</span>
                         {% endif %}
                     </td>
                     <td onclick="event.stopPropagation();">
-                        {% if not demand.approved %}
+                        {% if not demand.approved and demand.approval_status != 'pending_gm' and demand.approval_status != 'pending_director' %}
                         <form method="POST"
                             action="{{ url_for('production.approve_demand', demand_no=demand.demand_no) }}"
                             style="display: inline;">
@@ -80,11 +88,9 @@
     </div>
     {% else %}
     <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
-        <p style="color: #666; font-size: 1.1rem;">No demand notes found</p>
-        <a href="{{ url_for('production.generate_demand') }}" class="btn btn-primary mt-3">Create First Demand Note</a>
+        <p style="color: #666; font-size: 1.1rem;">No import demand notes found</p>
+        <a href="{{ url_for('production.generate_demand') }}" class="btn btn-primary mt-3">Create First Import Demand Note</a>
     </div>
     {% endif %}
-
-
 </div>
 {% endblock %}

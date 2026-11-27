@@ -29,7 +29,11 @@
                     <td>{{ demand.required_date }}</td>
                     <td>{{ demand.created_at.strftime('%Y-%m-%d %H:%M') if demand.created_at else 'N/A' }}</td>
                     <td>
-                        {% if line is defined and line == 'biomedical' %}
+                        {% if line is defined and line == 'biomedical_disposable' %}
+                        <a href="{{ url_for('director_approve_view_biomedical_disposable', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% elif line is defined and line == 'biomedical_equipment' %}
+                        <a href="{{ url_for('director_approve_view_biomedical_equipment', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% elif line is defined and line == 'biomedical' %}
                         <a href="{{ url_for('director_approve_view_biomedical', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
                         {% elif line is defined and line == 'battery' %}
                         <a href="{{ url_for('director_approve_view_battery', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
@@ -49,7 +53,11 @@
     {% endif %}
 
     <div class="btn-group mt-4">
-        {% if line is defined and line == 'biomedical' %}
+        {% if line is defined and line == 'biomedical_disposable' %}
+        <a href="{{ url_for('biomedical_disposable_dashboard') }}" class="btn btn-secondary">← Back to Disposable Dashboard</a>
+        {% elif line is defined and line == 'biomedical_equipment' %}
+        <a href="{{ url_for('biomedical_equipment_dashboard') }}" class="btn btn-secondary">← Back to Equipment Dashboard</a>
+        {% elif line is defined and line == 'biomedical' %}
         <a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Back to Biomedical Dashboard</a>
         {% elif line is defined and line == 'battery' %}
         <a href="{{ url_for('battery_dashboard') }}" class="btn btn-secondary">← Back to Battery Dashboard</a>

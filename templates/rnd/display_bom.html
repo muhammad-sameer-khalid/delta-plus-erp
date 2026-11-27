@@ -13,31 +13,103 @@
     </div>
 
     {% if boms %}
-    <!-- Search Box -->
-    <div class="mt-4" style="max-width: 500px;">
-        <input type="text" id="bomSearch" class="form-input" placeholder="🔍 Search BOMs by name or type..."
-            data-search-target="bomList" data-search-type="list" style="padding: 0.75rem 1rem;">
+    <!-- Search Bars -->
+    <div class="mt-4" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="margin-bottom: 0.75rem;">
+            <label for="bomSearch" style="font-weight: 600; font-size: 0.85rem; color: #4a5568; display: block; margin-bottom: 0.25rem;">General Search</label>
+            <input type="text" id="bomSearch" class="form-input" placeholder="🔍 Search BOMs by name, type, tank, assembly..."
+                style="padding: 0.5rem 0.75rem; width: 100%; max-width: 500px;" oninput="filterBoms()">
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; align-items: end;">
+            <div>
+                <label for="searchTank" style="font-weight: 600; font-size: 0.85rem; color: #4a5568; display: block; margin-bottom: 0.25rem;">Search by Tank</label>
+                <input type="text" id="searchTank" class="form-input" placeholder="Tank (e.g. T-69)"
+                    style="padding: 0.45rem 0.65rem; font-size: 0.9rem;" oninput="filterBoms()">
+            </div>
+            <div>
+                <label for="searchAssembly" style="font-weight: 600; font-size: 0.85rem; color: #4a5568; display: block; margin-bottom: 0.25rem;">Search by Assembly</label>
+                <input type="text" id="searchAssembly" class="form-input" placeholder="Assembly Name"
+                    style="padding: 0.45rem 0.65rem; font-size: 0.9rem;" oninput="filterBoms()">
+            </div>
+            <div>
+                <label for="searchSubAssembly" style="font-weight: 600; font-size: 0.85rem; color: #4a5568; display: block; margin-bottom: 0.25rem;">Search by Sub-Assembly</label>
+                <input type="text" id="searchSubAssembly" class="form-input" placeholder="Sub-Assembly Name"
+                    style="padding: 0.45rem 0.65rem; font-size: 0.9rem;" oninput="filterBoms()">
+            </div>
+        </div>
     </div>
 
     <div class="list-container mt-4" id="bomList">
         {% for bom in boms %}
-        <div class="list-item" onclick="window.location.href='{{ url_for('rnd.view_bom', bom_id=bom.id) }}'">
+        <div class="list-item" onclick="window.location.href='{{ url_for('rnd.view_bom', bom_id=bom.id) }}'"
+             data-name="{{ (bom.bom_name or '')|lower }}"
+             data-type="{{ (bom.bom_type or '')|lower }}"
+             data-tank="{{ (bom.tank or '')|lower }}"
+             data-assembly="{{ (bom.assembly_name or '')|lower }}"
+             data-sub-assembly="{{ (bom.sub_assembly_name or '')|lower }}">
             <div>
                 <span class="list-item-title">{{ bom.bom_name }}</span>
-                <span class="list-item-subtitle">
-                    {% if bom.bom_type == 'PCB' %}
-                    📟 PCB
-                    {% else %}
-                    🔧 Assembly
+                <div class="list-item-subtitle" style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                    <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">
+                        {% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %}
+                    </span>
+                    {% if bom.tank %}
+                    <span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+                        Tank: {{ bom.tank }}
+                    </span>
                     {% endif %}
-                </span>
+                    {% if bom.assembly_name %}
+                    <span style="background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">
+                        Assy: {{ bom.assembly_name }}
+                    </span>
+                    {% endif %}
+                    {% if bom.sub_assembly_name %}
+                    <span style="background: #ede9fe; color: #5b21b6; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">
+                        Sub-Assy: {{ bom.sub_assembly_name }}
+                    </span>
+                    {% endif %}
+                </div>
             </div>
-            <div style="color: #666; font-size: 0.9rem;">
-                {{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else '' }}
+            <div style="color: #666; font-size: 0.9rem; text-align: right;">
+                <div>{{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else '' }}</div>
+                {% if bom.currency %}
+                <small style="color: #888;">{{ bom.currency }}</small>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
+
+    <script>
+    function filterBoms() {
+        const generalQ = (document.getElementById('bomSearch').value || '').trim().toLowerCase();
+        const tankQ = (document.getElementById('searchTank').value || '').trim().toLowerCase();
+        const assemblyQ = (document.getElementById('searchAssembly').value || '').trim().toLowerCase();
+        const subAssemblyQ = (document.getElementById('searchSubAssembly').value || '').trim().toLowerCase();
+
+        const items = document.querySelectorAll('#bomList .list-item');
+        items.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const type = item.getAttribute('data-type') || '';
+            const tank = item.getAttribute('data-tank') || '';
+            const assembly = item.getAttribute('data-assembly') || '';
+            const subAssembly = item.getAttribute('data-sub-assembly') || '';
+
+            const matchGeneral = !generalQ || name.includes(generalQ) || type.includes(generalQ) || 
+                                 tank.includes(generalQ) || assembly.includes(generalQ) || subAssembly.includes(generalQ);
+            const matchTank = !tankQ || tank.includes(tankQ);
+            const matchAssembly = !assemblyQ || assembly.includes(assemblyQ);
+            const matchSubAssembly = !subAssemblyQ || subAssembly.includes(subAssemblyQ);
+
+            if (matchGeneral && matchTank && matchAssembly && matchSubAssembly) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    </script>
     {% else %}
     <div class="text-center mt-4" style="padding: 3rem; background: #f8f9fa; border-radius: 8px;">
         <p style="color: #666; font-size: 1.1rem;">No BOMs found</p>

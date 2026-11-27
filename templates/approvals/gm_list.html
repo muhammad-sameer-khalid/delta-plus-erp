@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container">
     <h1>GM Approvals</h1>
-    <p>Demand notes approved by Director, pending your final approval</p>
+    <p>Demand notes pending your approval</p>
 
     {% if demands %}
     <div class="table-container mt-4">
@@ -16,8 +16,7 @@
                     <th>Department</th>
                     <th>Demanded By</th>
                     <th>Required Date</th>
-                    <th>Approved By Director</th>
-                    <th>Director Approved At</th>
+                    <th>Created At</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -28,11 +27,13 @@
                     <td>{{ demand.department }}</td>
                     <td>{{ demand.demanded_by }}</td>
                     <td>{{ demand.required_date }}</td>
-                    <td>{{ demand.approved_by_director or 'N/A' }}</td>
-                    <td>{{ demand.director_approved_at.strftime('%Y-%m-%d %H:%M') if demand.director_approved_at else
-                        'N/A' }}</td>
+                    <td>{{ demand.created_at.strftime('%Y-%m-%d %H:%M') if demand.created_at else 'N/A' }}</td>
                     <td>
-                        {% if line is defined and line == 'biomedical' %}
+                        {% if line is defined and line == 'biomedical_disposable' %}
+                        <a href="{{ url_for('gm_approve_view_biomedical_disposable', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% elif line is defined and line == 'biomedical_equipment' %}
+                        <a href="{{ url_for('gm_approve_view_biomedical_equipment', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
+                        {% elif line is defined and line == 'biomedical' %}
                         <a href="{{ url_for('gm_approve_view_biomedical', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
                         {% elif line is defined and line == 'battery' %}
                         <a href="{{ url_for('gm_approve_view_battery', demand_no=demand.demand_no) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">📋 View & Approve</a>
@@ -52,7 +53,11 @@
     {% endif %}
 
     <div class="btn-group mt-4">
-        {% if line is defined and line == 'biomedical' %}
+        {% if line is defined and line == 'biomedical_disposable' %}
+        <a href="{{ url_for('biomedical_disposable_dashboard') }}" class="btn btn-secondary">← Back to Disposable Dashboard</a>
+        {% elif line is defined and line == 'biomedical_equipment' %}
+        <a href="{{ url_for('biomedical_equipment_dashboard') }}" class="btn btn-secondary">← Back to Equipment Dashboard</a>
+        {% elif line is defined and line == 'biomedical' %}
         <a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Back to Biomedical Dashboard</a>
         {% elif line is defined and line == 'battery' %}
         <a href="{{ url_for('battery_dashboard') }}" class="btn btn-secondary">← Back to Battery Dashboard</a>

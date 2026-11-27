@@ -1,34 +1,110 @@
 {% extends "base.html" %}
 {% block title %}{{ bom.bom_name }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
 {% block content %}
+<style>
+@page {
+    size: A4 portrait;
+    margin: 15mm;
+}
+@media print {
+    body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    nav, header, footer, .navbar, .no-print, .btn, .flash-messages {
+        display: none !important;
+    }
+    body * {
+        visibility: hidden;
+    }
+    #printableBomArea, #printableBomArea * {
+        visibility: visible;
+    }
+    #printableBomArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    #printableBomArea table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto;
+    }
+    #printableBomArea tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    #printableBomArea th, #printableBomArea td {
+        border: 1px solid #333 !important;
+        padding: 6px 8px !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+        font-size: 9.5pt !important;
+        color: #000 !important;
+    }
+    #printableBomArea thead {
+        display: table-header-group;
+    }
+}
+</style>
+
 <div class="container">
-    <div class="flex-between mb-4">
+    <div class="flex-between mb-4 no-print">
         <div>
             <h1>{{ bom.bom_name }}</h1>
-            <p style="color: #666;">{% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %} • Created: {{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else 'N/A' }}</p>
+            <p style="color: #666; margin-top: 0.25rem;">
+                {% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %} • Created: {{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else 'N/A' }}
+                • <strong>Currency:</strong> {{ bom.currency or 'RMB' }}
+            </p>
         </div>
-        <div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="window.print()" class="btn btn-primary">🖨️ Print BOM</button>
             <a href="{{ url_for(bp ~ '.display_bom') }}" class="btn btn-secondary">← Back to List</a>
         </div>
     </div>
     {% if components %}
-    <div class="table-container">
-        <table>
-            <thead><tr><th>Designator</th><th>Part Type</th><th>Part Value</th><th>Part Description</th><th>Footprint</th><th>Qty</th></tr></thead>
-            <tbody>
-                {% for component in components %}
-                <tr>
-                    <td>{{ component.designator }}</td><td>{{ component.part_type }}</td><td>{{ component.part_value }}</td>
-                    <td>{{ component.part_description }}</td><td>{{ component.footprint }}</td><td>{{ component.qty }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div id="printableBomArea">
+        <div class="table-container">
+            <table class="data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 12%;">Designator</th>
+                        <th style="width: 13%;">Part Type</th>
+                        <th style="width: 13%;">Part Value</th>
+                        <th style="width: 25%;">Part Description</th>
+                        <th style="width: 12%;">Footprint</th>
+                        <th style="width: 6%;">Qty</th>
+                        <th style="width: 7%;">Unit Price in {{ bom.currency or 'RMB' }}</th>
+                        <th style="width: 7%;">Total Price in {{ bom.currency or 'RMB' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for component in components %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td style="word-break: break-word;">{{ component.designator }}</td>
+                        <td style="word-break: break-word;">{{ component.part_type }}</td>
+                        <td style="word-break: break-word;">{{ component.part_value }}</td>
+                        <td style="word-break: break-word;">{{ component.part_description }}</td>
+                        <td style="word-break: break-word;">{{ component.footprint }}</td>
+                        <td>{{ component.qty }}</td>
+                        <td>{{ "%.2f"|format(component.unit_price or 0.0) }}</td>
+                        <td>{{ "%.2f"|format(component.total_price or ((component.unit_price or 0.0) * (component.qty or 1))) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    <div class="mt-3" style="text-align: right; color: #666;"><strong>Total Components: {{ components|length }}</strong></div>
+    <div class="mt-3 no-print" style="text-align: right; color: #666;"><strong>Total Components: {{ components|length }}</strong></div>
     {% else %}
     <div class="text-center mt-4" style="padding: 2rem; background: #f8f9fa; border-radius: 8px;"><p style="color: #666;">No components in this BOM</p></div>
     {% endif %}
-    <div class="mt-4"><a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary">← {{ line|capitalize }} Dashboard</a></div>
+    <div class="mt-4 no-print"><a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary">← {{ line|replace('_', ' ')|capitalize }} Dashboard</a></div>
 </div>
 {% endblock %}

@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Final Approve Demand Note - Delta Plus ERP{% endblock %}
+{% block title %}GM Approval - Demand Note {{ demand.demand_no }} - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Final Approve Demand Note: {{ demand.demand_no }}</h1>
+    <h1>General Manager Approval: Demand Note {{ demand.demand_no }}</h1>
 
     <!-- Demand Note Details -->
-    <div class="card mt-4">
+    <div class="card mt-4" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;">
         <h3>Demand Note Details</h3>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
             <div>
-                <strong>Demand No:</strong> {{ demand.demand_no }}
+                <strong>Demand No:</strong> #{{ demand.demand_no }}
             </div>
             <div>
                 <strong>Department:</strong> {{ demand.department }}
@@ -23,19 +23,18 @@
                 <strong>Required Date:</strong> {{ demand.required_date }}
             </div>
             <div>
-                <strong>Created At:</strong> {{ demand.created_at.strftime('%Y-%m-%d %H:%M') if demand.created_at else
-                'N/A' }}
-            </div>
-            <div>
-                <strong>Approved By Director:</strong> {{ demand.approved_by_director or 'N/A' }}
-            </div>
-            <div>
-                <strong>Director Approved At:</strong> {{ demand.director_approved_at.strftime('%Y-%m-%d %H:%M') if
-                demand.director_approved_at else 'N/A' }}
+                <strong>Type:</strong>
+                <span style="padding: 2px 8px; border-radius: 4px; font-weight: 600;
+                    {% if demand.demand_type == 'local' %}background:#fef3c7; color:#92400e;{% else %}background:#e0f2fe; color:#0369a1;{% endif %}">
+                    {{ '🏪 Local' if demand.demand_type == 'local' else '📥 Import' }}
+                </span>
             </div>
             <div>
                 <strong>Status:</strong>
-                <span style="color: #2196F3; font-weight: bold;">Pending GM Approval</span>
+                <span style="color: #d97706; font-weight: bold;">Pending GM Approval</span>
+            </div>
+            <div>
+                <strong>Created At:</strong> {{ demand.created_at.strftime('%Y-%m-%d %H:%M') if demand.created_at else 'N/A' }}
             </div>
         </div>
     </div>
@@ -43,55 +42,124 @@
     <!-- Components Table -->
     <div class="mt-4">
         <h3>Components</h3>
-        <div class="table-container mt-2">
-            <table>
+        <div class="table-container mt-2" style="overflow-x: auto; border: 1px solid #ddd; border-radius: 8px;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr>
-                        <th>Sr #</th>
-                        <th>Part Description</th>
-                        <th>Qty</th>
-                        <th>Person's Demand</th>
-                        <th>Project</th>
-                        <th>Remarks</th>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 5%;">Sr #</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 25%;">Part Description</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 8%;">Qty</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 14%;">Person's Demand</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 13%;">Project</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 11%;">Unit Price</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 11%;">Total Price</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #ddd; width: 13%;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for component in components %}
                     <tr>
-                        <td>{{ component.sr_no }}</td>
-                        <td>{{ component.part_description }}</td>
-                        <td>{{ component.qty }}</td>
-                        <td>{{ component.persons_demand }}</td>
-                        <td>{{ component.project }}</td>
-                        <td>{{ component.remarks }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ component.sr_no }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ component.part_description }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;"><strong>{{ component.qty }}</strong></td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ component.persons_demand or '-' }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ component.project or '-' }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ "%.2f"|format(component.unit_price) if component.unit_price is not none and component.unit_price > 0 else '-' }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ "%.2f"|format(component.total_price) if component.total_price is not none and component.total_price > 0 else '-' }}</td>
+                        <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">{{ component.remarks or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        <div class="mt-3" style="text-align: right; font-weight: bold; font-size: 1.1rem;">
+        <div class="mt-3" style="text-align: right; font-weight: bold; font-size: 1.1rem; color: #444;">
             Total Components: {{ total_components }}
         </div>
     </div>
 
-    <!-- Approve Button -->
-    <div class="btn-group mt-4">
-        {% if line is defined and line == 'biomedical' %}
-        <a href="{{ url_for('gm_approvals_biomedical') }}" class="btn btn-secondary">← Back to List</a>
-        <form method="POST" action="{{ url_for('gm_approve_submit_biomedical', demand_no=demand.demand_no) }}" style="display: inline;">
+    <!-- Actions -->
+    <div class="btn-group mt-4" style="display: flex; gap: 1rem; align-items: center;">
+        {% if line is defined and line == 'biomedical_disposable' %}
+            <a href="{{ url_for('gm_approvals_biomedical_disposable') }}" class="btn btn-secondary">← Back to List</a>
+            <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_disposable', demand_no=demand.demand_no) }}" style="display: inline;">
+        {% elif line is defined and line == 'biomedical_equipment' %}
+            <a href="{{ url_for('gm_approvals_biomedical_equipment') }}" class="btn btn-secondary">← Back to List</a>
+            <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_equipment', demand_no=demand.demand_no) }}" style="display: inline;">
         {% elif line is defined and line == 'battery' %}
-        <a href="{{ url_for('gm_approvals_battery') }}" class="btn btn-secondary">← Back to List</a>
-        <form method="POST" action="{{ url_for('gm_approve_submit_battery', demand_no=demand.demand_no) }}" style="display: inline;">
+            <a href="{{ url_for('gm_approvals_battery') }}" class="btn btn-secondary">← Back to List</a>
+            <form method="POST" action="{{ url_for('gm_approve_submit_battery', demand_no=demand.demand_no) }}" style="display: inline;">
         {% else %}
-        <a href="{{ url_for('gm_approvals') }}" class="btn btn-secondary">← Back to List</a>
-        <form method="POST" action="{{ url_for('gm_approve_submit', demand_no=demand.demand_no) }}" style="display: inline;">
+            <a href="{{ url_for('gm_approvals') }}" class="btn btn-secondary">← Back to List</a>
+            <form method="POST" action="{{ url_for('gm_approve_submit', demand_no=demand.demand_no) }}" style="display: inline;">
         {% endif %}
             <button type="submit" class="btn btn-success"
-                onclick="return confirm('Are you sure you want to give final approval and send this to Supply Chain?')">
-                ✓ Final Approve & Send to Supply Chain
+                onclick="return confirm('Are you sure you want to approve this demand note and send it to Director?')">
+                ✓ Approve & Send to Director
             </button>
+        </form>
+
+        <button type="button" class="btn btn-danger" onclick="openDeclineModal()">
+            ✗ Decline Demand Note
+        </button>
+    </div>
+</div>
+
+<!-- Decline Modal -->
+<div id="declineModal" class="modal">
+    <div class="modal-content" style="max-width: 550px; width: 95%;">
+        <h3 style="color: #e74c3c; margin-top: 0;">Decline Demand Note #{{ demand.demand_no }}</h3>
+        <p style="color: #666;">Please provide remarks explaining why this demand note is being declined. These remarks will be saved and sent to the submitter.</p>
+        
+        {% if line is defined and line == 'biomedical_disposable' %}
+        <form method="POST" action="{{ url_for('gm_decline_biomedical_disposable', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'biomedical_equipment' %}
+        <form method="POST" action="{{ url_for('gm_decline_biomedical_equipment', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'battery' %}
+        <form method="POST" action="{{ url_for('gm_decline_battery', demand_no=demand.demand_no) }}">
+        {% else %}
+        <form method="POST" action="{{ url_for('gm_decline', demand_no=demand.demand_no) }}">
+        {% endif %}
+            <div class="form-group mt-3">
+                <label class="form-label" for="decline_remarks">Decline Remarks (Optional)</label>
+                <textarea id="decline_remarks" name="decline_remarks" class="form-input" rows="4" placeholder="Enter reason for declining..."></textarea>
+            </div>
+            <div class="btn-group mt-4" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" onclick="closeDeclineModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-danger">Confirm Decline</button>
+            </div>
         </form>
     </div>
 </div>
+
+<script>
+    function openDeclineModal() {
+        document.getElementById('declineModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('decline_remarks').focus(), 50);
+    }
+    function closeDeclineModal() {
+        document.getElementById('declineModal').style.display = 'none';
+    }
+</script>
+
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
 {% endblock %}

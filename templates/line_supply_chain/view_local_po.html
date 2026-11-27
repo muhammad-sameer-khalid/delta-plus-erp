@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Local Purchase Order {{ po.po_number }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<!-- Top Controls (no print) -->
+<div class="container no-print" style="margin: 1rem auto; max-width: 800px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <a href="{{ url_for(bp ~ '.display_local_po') }}" class="btn btn-secondary">← Back to Local PO List</a>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <span style="color: #666; font-size: 0.9rem;">Shortcut: Ctrl+P</span>
+        <button onclick="window.print()" class="btn btn-primary">🖨️ Print Local PO (A4)</button>
+    </div>
+</div>
+
+<div class="local-po-document" id="printableLocalPO">
+    <!-- Top Header Image -->
+    <div class="local-po-header">
+        <img src="{{ url_for('static', filename='images/po_header.jpeg') }}" alt="Delta Plus Header" onerror="this.style.display='none'">
+    </div>
+
+    <!-- Centered bold underlined Title -->
+    <div class="local-po-title">
+        <u><strong>PURCHASE ORDER</strong></u>
+    </div>
+
+    <!-- Flexbox space-between: PO Number and Current Date -->
+    <div class="local-po-number-date">
+        <div class="po-no">No.: {{ po.po_number }}</div>
+        <div class="po-date">{{ current_date }}</div>
+    </div>
+
+    <div class="empty-line"></div>
+
+    <!-- Left-aligned To Section -->
+    <div class="local-po-to">
+        <div>To: <b>{{ po.supplier_name or 'N/A' }}</b></div>
+        {% if po.supplier_company %}<div><b>{{ po.supplier_company }}</b></div>{% endif %}
+        {% if po.supplier_address %}<div>{{ po.supplier_address }}</div>{% endif %}
+        <div>Tel: {{ po.supplier_telephone or '' }}</div>
+        <div>Postal Code: {{ po.supplier_postal_code or '' }}</div>
+    </div>
+
+    <div class="empty-line"></div>
+
+    <!-- 1x2 Table: Bill to / Ship to -->
+    <table class="local-po-bill-ship">
+        <tr>
+            <td style="width: 50%;">
+                <b>Bill to:</b><br>
+                <b>Delta Plus (Pvt) Ltd.</b><br>
+                Talha Plaza, Ramzan Colony, Bhadhana Road, Near Benazeer Chowk, Tarnol, Islamabad<br>
+                Phone: 92-51-2217053<br>
+                Fax: 92-51-2160157
+            </td>
+            <td style="width: 50%;">
+                <b>Ship to:</b><br>
+                <b>Delta Plus (Pvt) Ltd.</b><br>
+                Talha Plaza, Ramzan Colony, Bhadhana Road, Near Benazeer Chowk, Tarnol, Islamabad<br>
+                Phone: 92-51-2217053<br>
+                Fax: 92-51-2160157
+            </td>
+        </tr>
+    </table>
+
+    <div class="empty-line"></div>
+
+    <!-- Left-aligned Subject -->
+    <div class="local-po-subject">
+        <div><b>Subject: Purchase Order</b></div>
+        <div>We are pleased to place purchase order for the following items. Please issue a pro-forma invoice along with Bank information, so that payment can be transferred.</div>
+    </div>
+
+    <div class="empty-line"></div>
+
+    <!-- Components Table -->
+    <table class="local-po-table">
+        <thead>
+            <tr>
+                <th style="width: 8%;">Sr. #</th>
+                <th style="width: 46%;">Description</th>
+                <th style="width: 12%;">Qty</th>
+                <th style="width: 17%;">Rate</th>
+                <th style="width: 17%;">Total Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td style="text-align: center;">{{ loop.index }}</td>
+                <td style="word-break: break-word;">{{ item.part_description or item.part_value or item.part_type }}</td>
+                <td style="text-align: center;">{{ item.qty }}</td>
+                <td style="text-align: right;">{{ item.unit_price|commas }}</td>
+                <td style="text-align: right;">{{ item.total_price|commas }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="summary-row">
+                <td colspan="4" style="text-align: right;"><b>NET AMOUNT:</b></td>
+                <td style="text-align: right;"><b>{{ net_amount|commas }}</b></td>
+            </tr>
+            <tr class="summary-row">
+                <td colspan="4" style="text-align: right;"><b>17% GST</b></td>
+                <td style="text-align: right;"><b>{{ gst_amount|commas }}</b></td>
+            </tr>
+            <tr class="summary-row grand-total-row">
+                <td colspan="4" style="text-align: right;"><b>Grand Total</b></td>
+                <td style="text-align: right;"><b>{{ grand_total|commas }}</b></td>
+            </tr>
+            <tr class="contact-row">
+                <td colspan="5">
+                    <div style="display: flex; justify-content: space-around; width: 100%; font-size: 9.5pt; font-weight: 600;">
+                        <span>Cell: +92-333-5151759, +92-322-5822226</span>
+                        <span>Email: deltaplus4@gmail.com</span>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- Electronic Signature on last page at bottom right below table -->
+    <div class="local-po-signature">
+        <div class="signature-box">
+            <div><u>Muhammad Nawaz</u></div>
+            <div style="margin-top: 0.2rem;">Director Operations</div>
+        </div>
+    </div>
+
+    <!-- Page Footer (on every page) -->
+    <div class="local-po-footer">
+        <div class="footer-left">
+            <b>Address:</b> Talha Plaza, Ramzan Colony,<br>
+            Bhadhana Road, Near Benazeer Chowk,<br>
+            Tarnol, Islamabad, 46000, Pakistan
+        </div>
+        <div class="footer-right">
+            Email: deltaplus4@gmail.com<br>
+            Ph: +52-922160155-6, +51-2217053<br>
+            Fax: 051-2160157
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Print Button below whole thing generated -->
+<div class="container no-print text-center" style="margin: 2rem auto; max-width: 800px;">
+    <button onclick="window.print()" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.75rem 2rem;">🖨️ Print Purchase Order (A4)</button>
+</div>
+
+<style>
+    .local-po-document {
+        background: white;
+        max-width: 210mm;
+        margin: 1.5rem auto;
+        padding: 12mm 18mm 25mm 18mm;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        min-height: 297mm;
+        box-sizing: border-box;
+        color: #000;
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+        font-size: 10pt;
+        line-height: 1.4;
+        position: relative;
+    }
+
+    .local-po-header img {
+        width: 100%;
+        max-height: 40mm;
+        object-fit: contain;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .local-po-title {
+        text-align: center;
+        font-size: 1.3rem;
+        margin: 0.5rem 0;
+        letter-spacing: 0.5px;
+    }
+
+    .local-po-number-date {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10pt;
+        margin: 0.4rem 0;
+        font-weight: bold;
+    }
+
+    .empty-line {
+        height: 0.85rem;
+    }
+
+    .local-po-to {
+        line-height: 1.45;
+        font-size: 10pt;
+    }
+
+    .local-po-bill-ship {
+        width: 100%;
+        border: 1px solid #000;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+        margin: 0.25rem 0;
+    }
+
+    .local-po-bill-ship td {
+        border: 1px solid #000;
+        padding: 0.5rem 0.75rem;
+        vertical-align: top;
+        line-height: 1.4;
+    }
+
+    .local-po-subject {
+        line-height: 1.45;
+        font-size: 10pt;
+    }
+
+    .local-po-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+        margin: 0.5rem 0;
+    }
+
+    .local-po-table th,
+    .local-po-table td {
+        border: 1px solid #000;
+        padding: 0.45rem 0.6rem;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+
+    .local-po-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .summary-row td {
+        padding: 0.45rem 0.6rem;
+    }
+
+    .grand-total-row {
+        background-color: #f9f9f9;
+        font-size: 10pt;
+    }
+
+    .contact-row td {
+        padding: 0.5rem 0.6rem;
+        border: 1px solid #000;
+    }
+
+    .local-po-signature {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+        page-break-inside: avoid;
+    }
+
+    .signature-box {
+        text-align: right;
+        min-width: 180px;
+    }
+
+    .local-po-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 8pt;
+        border-top: 1px solid #000;
+        padding-top: 0.4rem;
+        margin-top: 1.5rem;
+        color: #000;
+        page-break-inside: avoid;
+        line-height: 1.35;
+    }
+
+    .local-po-footer .footer-left {
+        max-width: 48%;
+        text-align: left;
+    }
+
+    .local-po-footer .footer-right {
+        max-width: 50%;
+        text-align: right;
+    }
+
+    /* Print styles */
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm 15mm 15mm 15mm;
+        }
+
+        body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 10pt;
+        }
+
+        .navbar, .no-print, header, footer, .flash-messages {
+            display: none !important;
+        }
+
+        .local-po-document {
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            min-height: auto !important;
+        }
+
+        .local-po-table th {
+            background-color: #eee !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .local-po-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+        }
+    }
+</style>
+{% endblock %}

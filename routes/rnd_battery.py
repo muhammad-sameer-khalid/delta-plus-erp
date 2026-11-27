@@ -18,13 +18,18 @@ def merge_duplicate_components(components):
     for i, comp1 in enumerate(components):
         if i in merged_indices:
             continue
+        u_price = float(comp1.get('unit_price', 0) or 0)
+        qty = int(comp1.get('qty', 0) or 0)
+        tot_price = float(comp1.get('total_price', 0) or (u_price * qty))
         merged_comp = {
             'designator': comp1.get('designator', ''),
             'part_type': comp1.get('part_type', ''),
             'part_value': comp1.get('part_value', ''),
             'part_description': comp1.get('part_description', ''),
             'footprint': comp1.get('footprint', ''),
-            'qty': comp1.get('qty', 0)
+            'qty': qty,
+            'unit_price': u_price,
+            'total_price': tot_price
         }
         for j, comp2 in enumerate(components):
             if i == j or j in merged_indices:
@@ -34,7 +39,10 @@ def merge_duplicate_components(components):
                 comp1.get('part_value', '').strip().lower() == comp2.get('part_value', '').strip().lower() and
                 comp1.get('part_description', '').strip().lower() == comp2.get('part_description', '').strip().lower() and
                 comp1.get('footprint', '').strip().lower() == comp2.get('footprint', '').strip().lower()):
-                merged_comp['qty'] += comp2.get('qty', 0)
+                merged_comp['qty'] += int(comp2.get('qty', 0) or 0)
+                if not merged_comp['unit_price'] and comp2.get('unit_price'):
+                    merged_comp['unit_price'] = float(comp2.get('unit_price') or 0)
+                merged_comp['total_price'] = round(merged_comp['unit_price'] * merged_comp['qty'], 2)
                 merged_indices.add(j)
         result.append(merged_comp)
     return result
@@ -57,6 +65,7 @@ def generate_bom():
     if request.method == 'POST':
         bom_name = request.form.get('bom_name', '').strip()
         bom_type = request.form.get('bom_type', '').strip()
+        currency = request.form.get('currency', 'RMB').strip().upper() or 'RMB'
         if not bom_name or not bom_type:
             flash('BOM name and type are required', 'error')
             return redirect(url_for('rnd_battery.generate_bom'))
@@ -65,7 +74,7 @@ def generate_bom():
         if result and result['count'] > 0:
             flash(f'A BOM with the name "{bom_name}" already exists', 'error')
             return redirect(url_for('rnd_battery.generate_bom'))
-        execute_query(f"INSERT INTO {bm()} (bom_name, bom_type) VALUES (%s, %s)", (bom_name, bom_type), commit=True)
+        execute_query(f"INSERT INTO {bm()} (bom_name, bom_type, currency) VALUES (%s, %s, %s)", (bom_name, bom_type, currency), commit=True)
         bom_row = execute_query(f"SELECT id FROM {bm()} WHERE bom_name = %s", (bom_name,), fetch_one=True)
         bom_id = bom_row['id'] if bom_row else None
         if not bom_id:
@@ -73,21 +82,32 @@ def generate_bom():
             return redirect(url_for('rnd_battery.generate_bom'))
         components = []
         i = 0
-        while f'designator_{i}' in request.form:
+        while f'designator_{i}' in request.form or f'part_description_{i}' in request.form:
+            try:
+                unit_price = float(request.form.get(f'unit_price_{i}', 0) or 0)
+            except:
+                unit_price = 0.0
+            qty = int(request.form.get(f'qty_{i}', '') or 1)
+            try:
+                total_price = float(request.form.get(f'total_price_{i}', 0) or (unit_price * qty))
+            except:
+                total_price = round(unit_price * qty, 2)
             components.append({
                 'designator': request.form.get(f'designator_{i}', ''),
                 'part_type': request.form.get(f'part_type_{i}', ''),
                 'part_value': request.form.get(f'part_value_{i}', ''),
                 'part_description': request.form.get(f'part_description_{i}', ''),
                 'footprint': request.form.get(f'footprint_{i}', ''),
-                'qty': int(request.form.get(f'qty_{i}', '') or 1)
+                'qty': qty,
+                'unit_price': unit_price,
+                'total_price': total_price
             })
             i += 1
         merged_components = merge_duplicate_components(components)
         if merged_components:
             from database import execute_many
-            insert_comp_query = f"INSERT INTO {bi()} (bom_id, designator, part_type, part_value, part_description, footprint, qty) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-            params_list = [(bom_id, c['designator'], c['part_type'], c['part_value'], c['part_description'], c['footprint'], c['qty']) for c in merged_components]
+            insert_comp_query = f"INSERT INTO {bi()} (bom_id, designator, part_type, part_value, part_description, footprint, qty, unit_price, total_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            params_list = [(bom_id, c['designator'], c['part_type'], c['part_value'], c['part_description'], c['footprint'], c['qty'], c.get('unit_price', 0.0), c.get('total_price', 0.0)) for c in merged_components]
             execute_many(insert_comp_query, params_list)
         flash(f'BOM "{bom_name}" created successfully', 'success')
         return redirect(url_for('rnd_battery.display_bom'))
@@ -121,21 +141,32 @@ def edit_bom_form(bom_id):
         execute_query(f"DELETE FROM {bi()} WHERE bom_id = %s", (bid,), commit=True)
         components = []
         i = 0
-        while f'designator_{i}' in request.form:
+        while f'designator_{i}' in request.form or f'part_description_{i}' in request.form:
+            try:
+                unit_price = float(request.form.get(f'unit_price_{i}', 0) or 0)
+            except:
+                unit_price = 0.0
+            qty = int(request.form.get(f'qty_{i}', 0) or 0)
+            try:
+                total_price = float(request.form.get(f'total_price_{i}', 0) or (unit_price * qty))
+            except:
+                total_price = round(unit_price * qty, 2)
             components.append({
                 'designator': request.form.get(f'designator_{i}', ''),
                 'part_type': request.form.get(f'part_type_{i}', ''),
                 'part_value': request.form.get(f'part_value_{i}', ''),
                 'part_description': request.form.get(f'part_description_{i}', ''),
                 'footprint': request.form.get(f'footprint_{i}', ''),
-                'qty': int(request.form.get(f'qty_{i}', 0))
+                'qty': qty,
+                'unit_price': unit_price,
+                'total_price': total_price
             })
             i += 1
         merged_components = merge_duplicate_components(components)
         if merged_components:
             from database import execute_many
-            insert_comp_query = f"INSERT INTO {bi()} (bom_id, designator, part_type, part_value, part_description, footprint, qty) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-            params_list = [(bid, c['designator'], c['part_type'], c['part_value'], c['part_description'], c['footprint'], c['qty']) for c in merged_components]
+            insert_comp_query = f"INSERT INTO {bi()} (bom_id, designator, part_type, part_value, part_description, footprint, qty, unit_price, total_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            params_list = [(bid, c['designator'], c['part_type'], c['part_value'], c['part_description'], c['footprint'], c['qty'], c.get('unit_price', 0.0), c.get('total_price', 0.0)) for c in merged_components]
             execute_many(insert_comp_query, params_list)
         flash(f'BOM "{bom["bom_name"]}" updated successfully', 'success')
         return redirect(url_for('rnd_battery.edit_bom'))
@@ -163,7 +194,7 @@ def delete_bom(bom_id):
 @bp.route('/api/boms')
 @module_access_required('rnd', LINE)
 def get_boms_api():
-    boms = execute_query(f"SELECT id, bom_name, bom_type FROM {bm()} ORDER BY bom_name", fetch=True)
+    boms = execute_query(f"SELECT id, bom_name, bom_type, currency FROM {bm()} ORDER BY bom_name", fetch=True)
     return jsonify({'success': True, 'boms': boms or []})
 
 @bp.route('/api/bom/<int:bom_id>/components')

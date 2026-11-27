@@ -15,7 +15,7 @@ connection_pool = None
 def init_connection_pool():
     """Initialize MySQL connection pool with retry logic"""
     global connection_pool
-    max_retries = 5
+    max_retries = 3
     retry_delay = 2  # seconds
 
     for attempt in range(max_retries):
@@ -23,7 +23,7 @@ def init_connection_pool():
             logger.info(f"Attempting to connect to database (Attempt {attempt + 1}/{max_retries})...")
             connection_pool = pooling.MySQLConnectionPool(
                 pool_name="delta_plus_pool",
-                pool_size=5,
+                pool_size=int(os.getenv('DB_POOL_SIZE', 5)),
                 pool_reset_session=True,
                 **Config.DB_CONFIG
             )
@@ -40,7 +40,8 @@ def init_connection_pool():
     return False
 
 def get_db_connection():
-    """Get a connection from the pool"""
+    """Get a connection from the pool with auto-reconnect resilience"""
+    global connection_pool
     try:
         if connection_pool is None:
             if not init_connection_pool():
@@ -49,7 +50,22 @@ def get_db_connection():
         
         # Double check pool is not None after attempt
         if connection_pool:
-            return connection_pool.get_connection()
+            try:
+                conn = connection_pool.get_connection()
+            except Error as pool_err:
+                logger.warning(f"Connection pool error: {pool_err}. Re-initializing pool...")
+                init_connection_pool()
+                conn = connection_pool.get_connection() if connection_pool else None
+
+            if conn:
+                try:
+                    if not conn.is_connected():
+                        conn.reconnect(attempts=3, delay=1)
+                    else:
+                        conn.ping(reconnect=True, attempts=3, delay=1)
+                except Exception as ping_err:
+                    logger.warning(f"Connection ping/reconnect issue: {ping_err}")
+                return conn
         return None
         
     except Error as e:
@@ -81,6 +97,10 @@ def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False
         
         if fetch_one:
             result = cursor.fetchone()
+            try:
+                cursor.fetchall()
+            except Exception:
+                pass
         elif fetch:
             result = cursor.fetchall()
         else:

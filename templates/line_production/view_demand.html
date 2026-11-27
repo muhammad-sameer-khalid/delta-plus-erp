@@ -1,13 +1,36 @@
 {% extends "base.html" %}
-{% block title %}Demand Note #{{ demand.demand_no }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block title %}Demand Note #{{ demand.demand_no }} ({{ line|replace('_', ' ')|capitalize }}) - Delta Plus ERP{% endblock %}
 {% block content %}
 <div class="container">
-    <h1>Demand Note #{{ demand.demand_no }} ({{ line|capitalize }})</h1>
-    <div class="mt-4">
-        <a href="{{ url_for(line ~ '_dashboard') }}" class="btn btn-secondary mb-3">← Back to {{ line|capitalize }} Dashboard</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+            <h1>Demand Note #{{ demand.demand_no }} ({{ line|replace('_', ' ')|capitalize }})
+                <span style="font-size: 1rem; vertical-align: middle; padding: 4px 10px; border-radius: 4px; font-weight: normal; margin-left: 10px;
+                    {% if demand.demand_type == 'local' %}background: #fef3c7; color: #92400e;{% else %}background: #e0f2fe; color: #0369a1;{% endif %}">
+                    {{ '🏪 Local Demand' if demand.demand_type == 'local' else '📥 Import Demand' }}
+                </span>
+            </h1>
+        </div>
+        <div class="btn-group">
+            {% if demand.demand_type == 'local' %}
+            <a href="{{ url_for(bp ~ '.display_local_demands') }}" class="btn btn-secondary">← Back to Local Demands</a>
+            {% else %}
+            <a href="{{ url_for(bp ~ '.display_demand') }}" class="btn btn-secondary">← Back to Import Demands</a>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-primary">🖨️ Print Demand Note</button>
+        </div>
     </div>
+
+    {% if demand.approval_status == 'declined' %}
+    <div style="background: #fee2e2; border-left: 5px solid #ef4444; padding: 1.25rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <h4 style="color: #991b1b; margin-top: 0; margin-bottom: 0.5rem;">❌ Demand Note Declined</h4>
+        <p style="margin: 0; color: #7f1d1d;"><strong>Declined By:</strong> {{ demand.declined_by or 'Manager' }} {% if demand.declined_at %} on {{ demand.declined_at }}{% endif %}</p>
+        <p style="margin: 0.5rem 0 0 0; color: #7f1d1d;"><strong>Decline Remarks:</strong> {{ demand.decline_remarks or 'No remarks provided.' }}</p>
+    </div>
+    {% endif %}
+
     <div class="info-card mt-4">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem;">
             <div>
                 <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Demand Date</label>
                 <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">{{ demand.demand_date }}</p>
@@ -27,15 +50,22 @@
             <div>
                 <label style="font-weight: 600; color: #666; font-size: 0.9rem;">Status</label>
                 <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">
-                    {% if demand.approved %}
+                    {% if demand.approval_status == 'declined' %}
+                    <span style="color: #e74c3c; font-weight: 600;">✗ Declined</span>
+                    {% elif demand.approved %}
                     <span style="color: #27ae60; font-weight: 600;">✓ Approved</span>
+                    {% elif demand.approval_status == 'pending_director' %}
+                    <span style="color: #0284c7; font-weight: 600;">⏳ Pending Director</span>
+                    {% elif demand.approval_status == 'pending_gm' %}
+                    <span style="color: #d97706; font-weight: 600;">⏳ Pending GM</span>
                     {% else %}
-                    <span style="color: #f39c12; font-weight: 600;">⏳ Pending Approval</span>
+                    <span style="color: #4b5563; font-weight: 600;">Draft</span>
                     {% endif %}
                 </p>
             </div>
         </div>
     </div>
+
     <div class="mt-4">
         <h2>Components</h2>
         {% if components %}
@@ -43,12 +73,14 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">Sr#</th>
-                        <th style="width: 35%;">Part Description</th>
-                        <th style="width: 12%;">Qty</th>
-                        <th style="width: 18%;">Person's Demand</th>
-                        <th style="width: 15%;">Project</th>
-                        <th style="width: 12%;">Remarks</th>
+                        <th style="width: 5%;">Sr#</th>
+                        <th style="width: 25%;">Part Description</th>
+                        <th style="width: 8%;">Qty</th>
+                        <th style="width: 14%;">Person's Demand</th>
+                        <th style="width: 13%;">Project</th>
+                        <th style="width: 11%;">Unit Price</th>
+                        <th style="width: 11%;">Total Price</th>
+                        <th style="width: 13%;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,6 +91,8 @@
                         <td><strong>{{ component.qty }}</strong></td>
                         <td>{{ component.persons_demand or '-' }}</td>
                         <td>{{ component.project or '-' }}</td>
+                        <td>{{ "%.2f"|format(component.unit_price) if component.unit_price is not none and component.unit_price > 0 else '-' }}</td>
+                        <td>{{ "%.2f"|format(component.total_price) if component.total_price is not none and component.total_price > 0 else '-' }}</td>
                         <td>{{ component.remarks or '-' }}</td>
                     </tr>
                     {% endfor %}
@@ -74,15 +108,33 @@
         </div>
         {% endif %}
     </div>
+
     <div class="btn-group mt-4">
-        <a href="{{ url_for(bp ~ '.display_demand') }}" class="btn btn-secondary">← Back to Demand Notes</a>
-        <button onclick="printDemandNote()" class="btn btn-primary">🖨️ Print Demand Note</button>
-        {% if not demand.approved %}
+        {% if demand.demand_type == 'local' %}
+        <a href="{{ url_for(bp ~ '.display_local_demands') }}" class="btn btn-secondary">← Back to Local Demands</a>
+        {% else %}
+        <a href="{{ url_for(bp ~ '.display_demand') }}" class="btn btn-secondary">← Back to Import Demands</a>
+        {% endif %}
+        <button onclick="window.print()" class="btn btn-primary">🖨️ Print Demand Note</button>
+        {% if not demand.approved and demand.approval_status != 'pending_gm' and demand.approval_status != 'pending_director' %}
         <form method="POST" action="{{ url_for(bp ~ '.approve_demand', demand_no=demand.demand_no) }}" style="display: inline;">
             <button type="submit" class="btn btn-success">📤 Send for Approval</button>
         </form>
         {% endif %}
     </div>
 </div>
-<script>function printDemandNote() { window.print(); }</script>
+
+<style>
+    @media print {
+        .nav-menu, .btn-group, .btn, button { display: none !important; }
+        body { margin: 0; padding: 20px; }
+        .container { max-width: 100%; padding: 0; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .info-card { border: 1px solid #333; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
+        .table-container { border: 1px solid #333; margin-top: 10px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { border: 1px solid #333; padding: 8px; }
+        .data-table tr { page-break-inside: avoid; }
+    }
+</style>
 {% endblock %}

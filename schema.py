@@ -50,6 +50,8 @@ def create_all_tables():
     
     # Biomedical and Battery production line tables (full replica per line)
     create_line_tables('_biomedical')
+    create_line_tables('_biomedical_disposable')
+    create_line_tables('_biomedical_equipment')
     create_line_tables('_battery')
     
     # Initialize default admin
@@ -81,6 +83,10 @@ def create_bom_metadata_table_suffix(suffix):
         id INT AUTO_INCREMENT PRIMARY KEY,
         bom_name VARCHAR(255) NOT NULL,
         bom_type ENUM('PCB', 'Assembly') NOT NULL,
+        tank VARCHAR(255) NULL,
+        assembly_name VARCHAR(255) NULL,
+        sub_assembly_name VARCHAR(255) NULL,
+        currency VARCHAR(50) DEFAULT 'RMB',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_bom_name (bom_name)
@@ -103,6 +109,8 @@ def create_bom_items_table_suffix(suffix):
         part_description TEXT,
         footprint VARCHAR(255),
         qty INT NOT NULL,
+        unit_price DECIMAL(15, 2) DEFAULT 0.00,
+        total_price DECIMAL(15, 2) DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_bom_id (bom_id),
         FOREIGN KEY (bom_id) REFERENCES {meta}(id) ON DELETE CASCADE
@@ -122,12 +130,16 @@ def create_demand_notes_table_suffix(suffix):
         department VARCHAR(255) NOT NULL,
         required_date DATE NOT NULL,
         demanded_by VARCHAR(255) NOT NULL,
+        demand_type ENUM('import', 'local') DEFAULT 'import',
         approved BOOLEAN DEFAULT FALSE,
         approval_status VARCHAR(50),
         approved_by_director VARCHAR(255),
         director_approved_at TIMESTAMP NULL,
         approved_by_gm VARCHAR(255),
         gm_approved_at TIMESTAMP NULL,
+        decline_remarks TEXT NULL,
+        declined_by VARCHAR(255) NULL,
+        declined_at TIMESTAMP NULL,
         supply_chain_archived BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -152,6 +164,8 @@ def create_demand_items_table_suffix(suffix):
         part_description TEXT,
         footprint VARCHAR(255),
         qty INT NOT NULL,
+        unit_price DECIMAL(15, 2) DEFAULT 0.00,
+        total_price DECIMAL(15, 2) DEFAULT 0.00,
         persons_demand VARCHAR(255),
         project VARCHAR(255),
         remarks TEXT,
@@ -175,6 +189,8 @@ def create_po_metadata_table_suffix(suffix):
         supplier_address TEXT NOT NULL,
         supplier_telephone VARCHAR(50) NOT NULL,
         supplier_postal_code VARCHAR(20) NOT NULL,
+        currency VARCHAR(20) DEFAULT 'RMB',
+        po_type ENUM('import', 'local') DEFAULT 'import',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_po_number (po_number)
     )
@@ -215,6 +231,7 @@ def create_qc_tables_suffix(suffix):
                 part_description TEXT,
                 footprint VARCHAR(255),
                 po_no VARCHAR(50),
+                po_type ENUM('import', 'local') DEFAULT 'import',
                 qty INT NOT NULL,
                 good_qty INT DEFAULT 0,
                 status VARCHAR(50) DEFAULT 'Pending',
@@ -461,6 +478,10 @@ def create_bom_metadata_table():
         id INT AUTO_INCREMENT PRIMARY KEY,
         bom_name VARCHAR(255) UNIQUE NOT NULL,
         bom_type ENUM('PCB', 'Assembly') NOT NULL,
+        tank VARCHAR(255) NULL,
+        assembly_name VARCHAR(255) NULL,
+        sub_assembly_name VARCHAR(255) NULL,
+        currency VARCHAR(50) DEFAULT 'RMB',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_bom_name (bom_name)
@@ -483,12 +504,16 @@ def create_demand_notes_table():
         department VARCHAR(255) NOT NULL,
         required_date DATE NOT NULL,
         demanded_by VARCHAR(255) NOT NULL,
+        demand_type ENUM('import', 'local') DEFAULT 'import',
         approved BOOLEAN DEFAULT FALSE,
         approval_status VARCHAR(50),
         approved_by_director VARCHAR(255),
         director_approved_at TIMESTAMP NULL,
         approved_by_gm VARCHAR(255),
         gm_approved_at TIMESTAMP NULL,
+        decline_remarks TEXT NULL,
+        declined_by VARCHAR(255) NULL,
+        declined_at TIMESTAMP NULL,
         supply_chain_archived BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -537,6 +562,7 @@ def create_po_metadata_table():
         supplier_telephone VARCHAR(50) NOT NULL,
         supplier_postal_code VARCHAR(20) NOT NULL,
         currency VARCHAR(20) DEFAULT 'RMB',
+        po_type ENUM('import', 'local') DEFAULT 'import',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_po_number (po_number)
     )
@@ -557,6 +583,7 @@ def create_qc_tables():
             part_description TEXT,
             footprint VARCHAR(255),
             po_no VARCHAR(50),
+            po_type ENUM('import', 'local') DEFAULT 'import',
             qty INT NOT NULL,
             good_qty INT DEFAULT 0,
             status VARCHAR(50) DEFAULT 'Pending',
@@ -703,6 +730,8 @@ def create_demand_items_table():
         part_description TEXT,
         footprint VARCHAR(255),
         qty INT NOT NULL,
+        unit_price DECIMAL(15, 2) DEFAULT 0.00,
+        total_price DECIMAL(15, 2) DEFAULT 0.00,
         persons_demand VARCHAR(255),
         project VARCHAR(255),
         remarks TEXT,
@@ -754,6 +783,8 @@ def create_bom_items_table():
         part_description TEXT,
         footprint VARCHAR(255),
         qty INT NOT NULL,
+        unit_price DECIMAL(15, 2) DEFAULT 0.00,
+        total_price DECIMAL(15, 2) DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_bom_id (bom_id),
         FOREIGN KEY (bom_id) REFERENCES bom_metadata(id) ON DELETE CASCADE
@@ -857,30 +888,32 @@ def create_contracts_daily_check_table():
 
 def initialize_default_admin():
     """Initialize default admin account"""
+    import os
     import bcrypt
     
+    admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@deltaplus.com')
+    default_password = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin123')
+
     # Check if admin already exists
     query = "SELECT COUNT(*) as count FROM user_roles WHERE email = %s AND role = %s"
-    result = execute_query(query, ('khalid.pk38@gmail.com', 'general manager'), fetch_one=True)
+    result = execute_query(query, (admin_email, 'general manager'), fetch_one=True)
     
     if result and result['count'] > 0:
-        logger.info("Default admin already exists")
+        logger.info(f"Default admin {admin_email} already exists")
         return
     
-    # Create default admin with role
-    # Note: User will need to set password on first login or we can set a default
-    default_password = 'deltaplus123'  # Should be changed on first login
-    password_hash = bcrypt.hashpw(default_password.encode('utf-8'), bcrypt.gensalt())
-    
-    # Insert user
-    user_query = "INSERT INTO users (email, password_hash) VALUES (%s, %s)"
-    execute_query(user_query, ('khalid.pk38@gmail.com', password_hash.decode('utf-8')), commit=True)
+    # Check if user exists in users table
+    user_check = execute_query("SELECT COUNT(*) as count FROM users WHERE email = %s", (admin_email,), fetch_one=True)
+    if not user_check or user_check['count'] == 0:
+        password_hash = bcrypt.hashpw(default_password.encode('utf-8'), bcrypt.gensalt())
+        user_query = "INSERT INTO users (email, password_hash) VALUES (%s, %s)"
+        execute_query(user_query, (admin_email, password_hash.decode('utf-8')), commit=True)
     
     # Insert role
     role_query = "INSERT INTO user_roles (email, role) VALUES (%s, %s)"
-    execute_query(role_query, ('khalid.pk38@gmail.com', 'general manager'), commit=True)
+    execute_query(role_query, (admin_email, 'general manager'), commit=True)
     
-    logger.info("Created default admin account: khalid.pk38@gmail.com / deltaplus123 (Role: general manager)")
+    logger.info(f"Created default admin account: {admin_email} (Role: general manager)")
 
 def create_cdr_table():
     """CDR (Call Deposit Receipt) table for Tanks production line."""
@@ -946,3 +979,13 @@ def create_cdr_table_suffix(suffix):
     """
     execute_query(query, commit=True)
     logger.info(f"Created {t} table")
+
+if __name__ == '__main__':
+    from database import init_connection_pool
+    print("Connecting to database...")
+    if init_connection_pool():
+        print("Creating all tables and initializing default schema...")
+        create_all_tables()
+        print("All tables and default admin initialized successfully!")
+    else:
+        print("Error: Could not connect to database. Please check your DB credentials in .env or environment variables.")

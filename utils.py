@@ -158,7 +158,7 @@ def format_component_display(component):
     return ' - '.join(parts) if parts else 'Unknown Component'
 
 
-def generate_po_number(prefix='PO', db_execute_query):
+def generate_po_number(prefix='PO', db_execute_query=None):
     """
     Generate next PO number automatically
     

@@ -53,7 +53,7 @@ BATTERY_ROLES = ['general manager_battery'] + \
 VALID_ROLES = list(set(TANKS_ROLES + BIOMEDICAL_ROLES + BATTERY_ROLES))
 
 # Production line identifier
-PRODUCTION_LINES = ('tanks', 'biomedical', 'battery')
+PRODUCTION_LINES = ('tanks', 'biomedical_disposable', 'biomedical_equipment', 'battery')
 
 def get_production_lines_for_user(email):
     """Return list of production line keys the user can access."""
@@ -61,7 +61,7 @@ def get_production_lines_for_user(email):
     lines = set()
     
     if 'director' in user_roles:
-        return ['tanks', 'biomedical', 'battery']
+        return ['tanks', 'biomedical_disposable', 'biomedical_equipment', 'battery']
     
     # Tanks access
     if 'general manager' in user_roles:
@@ -69,12 +69,13 @@ def get_production_lines_for_user(email):
     if any(r.endswith('_tanks') for r in user_roles):
         lines.add('tanks')
         
-    # Biomedical access
-    if any(r.endswith('_biomedical') for r in user_roles):
-        lines.add('biomedical')
+    # Biomedical access (grants access to both Disposable and Equipment)
+    if 'general manager_biomedical' in user_roles or any(r.endswith('_biomedical') for r in user_roles):
+        lines.add('biomedical_disposable')
+        lines.add('biomedical_equipment')
         
     # Battery access
-    if any(r.endswith('_battery') for r in user_roles):
+    if 'general manager_battery' in user_roles or any(r.endswith('_battery') for r in user_roles):
         lines.add('battery')
         
     return list(lines)
@@ -90,7 +91,7 @@ def can_access_contracts(email, line='tanks'):
     
     if line == 'tanks':
         return 'general manager' in user_roles
-    if line == 'biomedical':
+    if line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
         return 'general manager_biomedical' in user_roles
     if line == 'battery':
         return 'general manager_battery' in user_roles
@@ -107,22 +108,28 @@ def can_delete_items(email, line='tanks'):
     if 'director' in user_roles or 'gm logistics' in user_roles:
         return True
     
-    suffix = f"_{line}"
     if line == 'tanks':
         if 'general manager' in user_roles:
             return True
+        for mgr in BASE_MANAGERS:
+            if f"{mgr}_tanks" in user_roles:
+                return True
+        return False
+    elif line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
+        if 'general manager_biomedical' in user_roles:
+            return True
+        for mgr in BASE_MANAGERS:
+            if f"{mgr}_biomedical" in user_roles:
+                return True
+        return False
     else:
+        suffix = f"_{line}"
         if f'general manager{suffix}' in user_roles:
             return True
-            
-    # Check for Manager roles for this specific line
-    # BASE_MANAGERS contains 'rnd manager', etc.
-    # We check for 'rnd manager_tanks', etc.
-    for mgr in BASE_MANAGERS:
-        if f"{mgr}{suffix}" in user_roles:
-            return True
-            
-    return False
+        for mgr in BASE_MANAGERS:
+            if f"{mgr}{suffix}" in user_roles:
+                return True
+        return False
 
 def sanitize_input(text):
     """Sanitize user input to prevent XSS and other injection attacks"""
@@ -244,36 +251,29 @@ def user_has_any_role(email, roles):
 
 def _roles_for_line(line):
     """Return (director_roles, gm_roles, access_map) for the given production line."""
-    suffix = f"_{line}"
+    if line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
+        suffix = '_biomedical'
+        gm_roles = ['general manager_biomedical']
+    elif line == 'tanks':
+        suffix = '_tanks'
+        gm_roles = ['general manager']
+    else:
+        suffix = f"_{line}"
+        gm_roles = [f'general manager{suffix}']
     
     # Director is global
     director_roles = ['director']
     
-    # GM Roles
-    if line == 'tanks':
-        gm_roles = ['general manager']
-    else:
-        gm_roles = [f'general manager{suffix}']
-        
     # Access Map (Module -> Allowed Roles)
-    # Allows both Managers and Members access to the module
     access_map = {}
     
-    # Map 'rnd' -> ['rnd manager_tanks', 'rnd member_tanks'] etc.
-    # Note: 'supply chain' keys in map might need to match module names passed to decorator
-    # Module names: 'rnd', 'production', 'supply_chain', 'qc', 'store'
-    
-    # Helper to get roles for a module prefix like 'rnd' -> 'rnd manager_tanks'
     def get_mod_roles(prefix):
         return [f"{prefix} manager{suffix}", f"{prefix} member{suffix}"]
         
     access_map['rnd'] = get_mod_roles('rnd')
     access_map['store'] = get_mod_roles('store')
     access_map['production'] = get_mod_roles('production')
-    # supply chain has a space in role 'supply chain manager' but module key is 'supply_chain'
     access_map['supply_chain'] = [f"supply chain manager{suffix}", f"supply chain member{suffix}"]
-    
-    # QC has 'qc manager' and 'qc decision' + 'qc member'
     access_map['qc'] = [f"qc manager{suffix}", f"qc decision{suffix}", f"qc member{suffix}"]
     
     return director_roles, gm_roles, access_map
@@ -358,7 +358,7 @@ def gm_roles_for_line(line):
     """Roles that can access GM approvals for the given line."""
     if line == 'tanks':
         return ['general manager']
-    if line == 'biomedical':
+    if line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
         return ['general manager_biomedical']
     if line == 'battery':
         return ['general manager_battery']

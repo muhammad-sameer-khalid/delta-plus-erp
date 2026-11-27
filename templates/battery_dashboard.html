@@ -29,6 +29,14 @@
         </div>
         {% endif %}
 
+        {% if 'supply_chain' in accessible_modules %}
+        <div class="card-bordered"
+            onclick="window.location.href='{{ url_for('supply_chain_battery.supply_chain_dashboard') }}'">
+            <h4>Supply Chain</h4>
+            <p>Click here to go to Supply Chain's dashboard</p>
+        </div>
+        {% endif %}
+
         {% if 'store' in accessible_modules %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for('store_battery.store_dashboard') }}'">
             <h4>Store</h4>
@@ -40,14 +48,6 @@
         <div class="card-bordered" onclick="window.location.href='{{ url_for('qc_battery.qc_dashboard') }}'">
             <h4>Quality Control</h4>
             <p>Click here to go to Quality Control's dashboard</p>
-        </div>
-        {% endif %}
-
-        {% if 'supply_chain' in accessible_modules %}
-        <div class="card-bordered"
-            onclick="window.location.href='{{ url_for('supply_chain_battery.supply_chain_dashboard') }}'">
-            <h4>Supply Chain</h4>
-            <p>Click here to go to Supply Chain's dashboard</p>
         </div>
         {% endif %}
 

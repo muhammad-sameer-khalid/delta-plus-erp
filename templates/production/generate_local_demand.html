@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Local Demand Note - Delta Plus ERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Generate Local Demand Note</h1>
+    <p>Create a new local demand note for Supply Chain</p>
+
+    <form method="POST" action="{{ url_for('production.generate_local_demand') }}" id="localDemandForm">
+        <!-- Metadata Section -->
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <h3 style="margin-top: 0;">Demand Note Details</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="demand_no" class="form-label required">Demand No.</label>
+                    <input type="number" id="demand_no" name="demand_no" class="form-input" required min="1"
+                        placeholder="Enter demand number">
+                </div>
+
+                <div class="form-group">
+                    <label for="department" class="form-label required">Department</label>
+                    <input type="text" id="department" name="department" class="form-input" required
+                        placeholder="e.g., Production, Assembly">
+                </div>
+
+                <div class="form-group">
+                    <label for="required_date" class="form-label required">Required Date</label>
+                    <input type="date" id="required_date" name="required_date" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="demanded_by" class="form-label required">Demanded By</label>
+                    <input type="text" id="demanded_by" name="demanded_by" class="form-input" required
+                        placeholder="Name of person">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Demand Date</label>
+                <input type="text" class="form-input" value="{{ current_date }}" disabled style="background: #e9ecef;">
+                <small style="color: #666;">Automatically set to current date</small>
+            </div>
+        </div>
+
+        <!-- Components Section -->
+        <div style="margin-bottom: 2rem;">
+            <h3>Components</h3>
+            <div style="border: 1px solid #ddd; border-radius: 8px; overflow-x: auto; margin-top: 1rem;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%; color: #333;">Sr#</th>
+                            <th style="width: 25%; color: #333;">Part Description</th>
+                            <th style="width: 8%; color: #333;">Qty</th>
+                            <th style="width: 14%; color: #333;">Person's Demand</th>
+                            <th style="width: 13%; color: #333;">Project</th>
+                            <th style="width: 10%; color: #333;">Unit Price</th>
+                            <th style="width: 10%; color: #333;">Total Price</th>
+                            <th style="width: 10%; color: #333;">Remarks</th>
+                            <th style="width: 5%; color: #333;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="componentsTable">
+                        <tr id="emptyRow" style="background: #f8f9fa;">
+                            <td colspan="9" style="text-align: center; padding: 2rem; color: #666;">
+                                No components added yet. Click "Add Component" below to add components.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" onclick="openAddComponentModal()" class="btn btn-secondary mt-3">
+                ➕ Add Component
+            </button>
+        </div>
+
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn btn-primary" id="submitBtn">💾 Create Local Demand Note</button>
+            <a href="{{ url_for('production.production_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Add Component Modal -->
+<div id="addComponentModal" class="modal">
+    <div class="modal-content" style="max-width: 650px; width: 95%;">
+        <h2>Add Component</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label required">Part Description</label>
+                <input type="text" id="modal_part_desc" class="form-input" placeholder="Enter part description">
+            </div>
+            <div class="form-group">
+                <label class="form-label required">Quantity</label>
+                <input type="number" id="modal_qty" class="form-input" min="1" value="1" oninput="calcModalTotal()">
+            </div>
+            <div class="form-group">
+                <label class="form-label required">Person's Demand</label>
+                <input type="text" id="modal_person" class="form-input" placeholder="Person's Demand">
+            </div>
+            <div class="form-group">
+                <label class="form-label required">Project</label>
+                <input type="text" id="modal_project" class="form-input" placeholder="Project name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unit Price (Optional)</label>
+                <input type="number" step="0.01" id="modal_unit_price" class="form-input" placeholder="0.00" oninput="calcModalTotal()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Total Price</label>
+                <input type="number" step="0.01" id="modal_total_price" class="form-input" placeholder="0.00" readonly style="background:#e9ecef;">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">Remarks (Optional)</label>
+                <input type="text" id="modal_remarks" class="form-input" placeholder="Remarks">
+            </div>
+        </div>
+        <div class="btn-group mt-4" style="justify-content: flex-end;">
+            <button type="button" onclick="closeAddComponentModal()" class="btn btn-secondary">Cancel</button>
+            <button type="button" onclick="confirmAddComponent()" class="btn btn-primary">Add to Table</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let componentCount = 0;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('required_date').setAttribute('min', today);
+    });
+
+    function openAddComponentModal() {
+        const demandedBy = document.getElementById('demanded_by').value.trim();
+        document.getElementById('modal_part_desc').value = '';
+        document.getElementById('modal_qty').value = '1';
+        document.getElementById('modal_person').value = demandedBy;
+        document.getElementById('modal_project').value = '';
+        document.getElementById('modal_unit_price').value = '';
+        document.getElementById('modal_total_price').value = '0.00';
+        document.getElementById('modal_remarks').value = '';
+        document.getElementById('addComponentModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('modal_part_desc').focus(), 50);
+    }
+
+    function closeAddComponentModal() {
+        document.getElementById('addComponentModal').style.display = 'none';
+    }
+
+    function calcModalTotal() {
+        const q = parseFloat(document.getElementById('modal_qty').value) || 0;
+        const p = parseFloat(document.getElementById('modal_unit_price').value) || 0;
+        document.getElementById('modal_total_price').value = (q * p).toFixed(2);
+    }
+
+    function confirmAddComponent() {
+        const desc = document.getElementById('modal_part_desc').value.trim();
+        const qty = parseInt(document.getElementById('modal_qty').value) || 0;
+        const person = document.getElementById('modal_person').value.trim();
+        const project = document.getElementById('modal_project').value.trim();
+        const unitPrice = parseFloat(document.getElementById('modal_unit_price').value) || 0.0;
+        const totalPrice = parseFloat(document.getElementById('modal_total_price').value) || (qty * unitPrice);
+        const remarks = document.getElementById('modal_remarks').value.trim();
+
+        if (!desc) {
+            alert('Part Description is required.');
+            return;
+        }
+        if (qty <= 0) {
+            alert('Quantity must be greater than 0.');
+            return;
+        }
+        if (!person) {
+            alert("Person's Demand is required.");
+            return;
+        }
+        if (!project) {
+            alert('Project is required.');
+            return;
+        }
+
+        const table = document.getElementById('componentsTable');
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        const newRow = table.insertRow();
+        newRow.className = 'component-row';
+
+        newRow.innerHTML = `
+            <td>${componentCount + 1}</td>
+            <td>${desc}
+                <input type="hidden" name="part_description_${componentCount}" value="${desc}">
+                <input type="hidden" name="part_type_${componentCount}" value="">
+                <input type="hidden" name="part_value_${componentCount}" value="">
+                <input type="hidden" name="footprint_${componentCount}" value="">
+            </td>
+            <td><input type="number" name="qty_${componentCount}" class="form-input" value="${qty}" min="1" required oninput="calcRowTotal(${componentCount})"></td>
+            <td><input type="text" name="persons_demand_${componentCount}" class="form-input" value="${person}"></td>
+            <td><input type="text" name="project_${componentCount}" class="form-input" value="${project}"></td>
+            <td><input type="number" step="0.01" name="unit_price_${componentCount}" class="form-input" value="${unitPrice > 0 ? unitPrice.toFixed(2) : ''}" placeholder="0.00" oninput="calcRowTotal(${componentCount})"></td>
+            <td><input type="number" step="0.01" name="total_price_${componentCount}" class="form-input" value="${totalPrice > 0 ? totalPrice.toFixed(2) : ''}" placeholder="0.00" readonly style="background:#e9ecef;"></td>
+            <td><input type="text" name="remarks_${componentCount}" class="form-input" value="${remarks}"></td>
+            <td><button type="button" onclick="deleteComponent(this)" class="btn btn-danger" style="padding: 0.4rem 0.8rem;">🗑️</button></td>
+        `;
+
+        componentCount++;
+        closeAddComponentModal();
+        updateRowNumbers();
+    }
+
+    function calcRowTotal(idx) {
+        const qEl = document.querySelector(`input[name="qty_${idx}"]`);
+        const pEl = document.querySelector(`input[name="unit_price_${idx}"]`);
+        const tEl = document.querySelector(`input[name="total_price_${idx}"]`);
+        if (qEl && pEl && tEl) {
+            const q = parseFloat(qEl.value) || 0;
+            const p = parseFloat(pEl.value) || 0;
+            tEl.value = (q * p).toFixed(2);
+        }
+    }
+
+    function deleteComponent(button) {
+        if (confirm('Are you sure you want to delete this component?')) {
+            const row = button.closest('tr');
+            row.remove();
+            updateRowNumbers();
+            renumberInputs();
+        }
+    }
+
+    function updateRowNumbers() {
+        const table = document.getElementById('componentsTable');
+        const rows = table.getElementsByClassName('component-row');
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].cells[0].textContent = i + 1;
+        }
+        if (rows.length === 0) {
+            table.innerHTML = `
+                <tr id="emptyRow" style="background: #f8f9fa;">
+                    <td colspan="9" style="text-align: center; padding: 2rem; color: #666;">
+                        No components added yet. Click "Add Component" below to add components.
+                    </td>
+                </tr>
+            `;
+            componentCount = 0;
+        }
+    }
+
+    function renumberInputs() {
+        const table = document.getElementById('componentsTable');
+        const rows = table.getElementsByClassName('component-row');
+
+        for (let i = 0; i < rows.length; i++) {
+            const inputs = rows[i].querySelectorAll('input');
+            inputs.forEach(input => {
+                const baseName = input.name.replace(/_\d+$/, '');
+                input.name = `${baseName}_${i}`;
+                if (baseName === 'qty' || baseName === 'unit_price') {
+                    input.setAttribute('oninput', `calcRowTotal(${i})`);
+                }
+            });
+        }
+
+        componentCount = rows.length;
+    }
+
+    // Strict validation: Demand Note without components cannot be created
+    document.getElementById('localDemandForm').addEventListener('submit', function (e) {
+        const table = document.getElementById('componentsTable');
+        const rows = table.getElementsByClassName('component-row');
+        if (!rows || rows.length === 0) {
+            e.preventDefault();
+            alert('A Demand Note without components cannot be created. Please add at least one component.');
+            return false;
+        }
+    });
+</script>
+
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .data-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Generate Purchase Order - Step 1 - Delta Plus ERP{% endblock %}
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Step 1 - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order</h1>
-    <p>Step 1 of 7: Enter PO Number & Currency</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order</h1>
+    <p>Step 1 of 7: Enter PO Number {{ '(Currency: RS)' if is_local else '& Currency' }}</p>
 
     <div class="form-container mt-4" style="max-width: 600px; margin: 2rem auto;">
-        <form method="POST" action="{{ url_for('supply_chain.generate_po_select_demand') }}">
+        <form method="POST" action="{{ url_for('supply_chain.generate_local_po_select_demand' if is_local else 'supply_chain.generate_po_select_demand') }}">
             <div class="form-group">
                 <label for="po_number" class="form-label required">PO Number</label>
                 <input type="text" id="po_number" name="po_number" class="form-input" required
@@ -18,14 +18,16 @@
                 </small>
             </div>
 
+            {% if not is_local %}
             <div class="form-group">
                 <label for="currency" class="form-label required">Currency</label>
                 <input type="text" id="currency" name="currency" class="form-input" required
-                    placeholder="e.g. RMB, USD, RS" maxlength="20" style="text-transform: uppercase;">
+                    placeholder="e.g. RMB, USD, EUR" maxlength="20" style="text-transform: uppercase;" value="RMB">
                 <small style="color: #666; display: block; margin-top: 0.5rem;">
-                    Enter currency code (e.g. RMB, USD, RS, EUR)
+                    Enter currency code (e.g. RMB, USD, EUR)
                 </small>
             </div>
+            {% endif %}
 
             <div class="form-actions">
                 <a href="{{ url_for('supply_chain.supply_chain_dashboard') }}" class="btn btn-secondary">Cancel</a>

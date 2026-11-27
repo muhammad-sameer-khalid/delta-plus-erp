@@ -1,37 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Generate PO - Step 2 ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Step 2 ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order: {{ po_number }} ({{ line|capitalize }})</h1>
-    <p>Step 2 of 7: Select Demand Note</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order: {{ po_number }} ({{ line|replace('_', ' ')|title }})</h1>
+    <p>Step 2 of 7: Select {{ 'Local' if is_local else 'Import' }} Demand Note</p>
+
     <div class="form-container mt-4" style="max-width: 600px; margin: 2rem auto;">
-        <form method="POST" action="{{ url_for(bp ~ '.generate_po_add_components') }}">
+        <form method="POST" action="{{ url_for(bp ~ '.generate_local_po_add_components' if is_local else bp ~ '.generate_po_add_components') }}">
             <div class="form-group">
-                <label for="demand_no" class="form-label required">Select Demand Note</label>
-                <input type="text" id="demand_search" class="form-input" placeholder="🔍 Type to search demand numbers..." onkeyup="filterDemands()">
-                <select id="demand_no" name="demand_no" class="form-input" required size="10" style="margin-top: 0.5rem;">
+                <label for="demand_no" class="form-label required">Select Approved {{ 'Local' if is_local else 'Import' }} Demand Note</label>
+                <input type="text" id="demand_search" class="form-input" 
+                       placeholder="🔍 Type to search demand numbers..." 
+                       onkeyup="filterDemands()">
+                <select id="demand_no" name="demand_no" class="form-input" required size="10" 
+                        style="margin-top: 0.5rem; font-family: monospace;">
                     {% if demand_numbers %}
-                    {% for num in demand_numbers %}<option value="{{ num }}">Demand #{{ num }}</option>{% endfor %}
+                        {% for num in demand_numbers %}
+                        <option value="{{ num }}">Demand #{{ num }}</option>
+                        {% endfor %}
                     {% else %}
-                    <option value="">No approved demands available</option>
+                        <option value="">No approved {{ 'local' if is_local else 'import' }} demands available</option>
                     {% endif %}
                 </select>
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    Type to filter, then click to select
+                </small>
             </div>
-            <div class="form-actions mt-4">
-                <a href="{{ url_for(bp ~ '.generate_po') }}" class="btn btn-secondary">← Back</a>
-                <button type="submit" class="btn btn-primary" {% if not demand_numbers %}disabled{% endif %}>Next →</button>
+
+            <div class="form-actions">
+                <a href="{{ url_for(bp ~ '.generate_local_po' if is_local else bp ~ '.generate_po') }}" class="btn btn-secondary">← Back</a>
+                <button type="submit" class="btn btn-primary" {% if not demand_numbers %}disabled{% endif %}>
+                    Next →
+                </button>
             </div>
         </form>
     </div>
 </div>
+
 <script>
 function filterDemands() {
     const search = document.getElementById('demand_search').value.toLowerCase();
     const select = document.getElementById('demand_no');
-    for (let i = 0; i < select.options.length; i++) {
-        select.options[i].style.display = select.options[i].text.toLowerCase().includes(search) ? '' : 'none';
+    const options = select.options;
+    
+    for (let i = 0; i < options.length; i++) {
+        const text = options[i].text.toLowerCase();
+        if (text.includes(search)) {
+            options[i].style.display = '';
+        } else {
+            options[i].style.display = 'none';
+        }
     }
 }
+
+document.getElementById('demand_search').addEventListener('input', function() {
+    const select = document.getElementById('demand_no');
+    const options = select.options;
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].style.display !== 'none' && options[i].value !== '') {
+            select.selectedIndex = i;
+            break;
+        }
+    }
+});
 </script>
-<style>.form-container{background:white;padding:2rem;border-radius:8px}.form-actions{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem}</style>
+
+<style>
+    .form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+    }
+</style>
 {% endblock %}

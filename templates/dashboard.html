@@ -15,7 +15,7 @@
         </div>
         {% endif %}
 
-        {% if production_lines is defined and 'biomedical' in production_lines %}
+        {% if production_lines is defined and ('biomedical_disposable' in production_lines or 'biomedical_equipment' in production_lines or 'biomedical' in production_lines) %}
         <div class="card" onclick="window.location.href='{{ url_for('biomedical_dashboard') }}'">
             <h3>Biomedical</h3>
             <p>Biomedical production management</p>

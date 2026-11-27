@@ -43,6 +43,12 @@ def _run_contracts_startup_checks_for_line(line=None):
     if line is None:
         suffix = ''
         label = 'tanks'
+    elif line == 'biomedical_disposable':
+        suffix = '_biomedical_disposable'
+        label = 'biomedical disposable'
+    elif line == 'biomedical_equipment':
+        suffix = '_biomedical_equipment'
+        label = 'biomedical equipment'
     elif line == 'biomedical':
         suffix = '_biomedical'
         label = 'biomedical'
@@ -98,6 +104,11 @@ def _run_contracts_startup_checks_for_line(line=None):
             ('data_entry_bg', msg, 'contract_bg_expiry', c['contract_id']),
             commit=True
         )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_bg_expiry', c['contract_id']),
+            commit=True
+        )
 
     # 2b. BG expiring soon (within 30 days): use the LATEST date
     upcoming_limit = today + timedelta(days=30)
@@ -120,6 +131,11 @@ def _run_contracts_startup_checks_for_line(line=None):
             ('data_entry_bg', msg, 'contract_bg_expiry', c['contract_id']),
             commit=True
         )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_bg_expiry', c['contract_id']),
+            commit=True
+        )
 
     # 3. Delivery not done (inspection entered, delivery not)
     items = execute_query(f"""
@@ -133,6 +149,11 @@ def _run_contracts_startup_checks_for_line(line=None):
         execute_query(
             "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
             (gm_role, msg, 'contract_delivery_pending', it['contract_id']),
+            commit=True
+        )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_delivery_pending', it['contract_id']),
             commit=True
         )
 
@@ -150,6 +171,11 @@ def _run_contracts_startup_checks_for_line(line=None):
             (gm_role, msg, 'contract_crv_pending', it['contract_id']),
             commit=True
         )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_crv_pending', it['contract_id']),
+            commit=True
+        )
 
     # 5. Payment not done (CRV entered, payment not)
     items = execute_query(f"""
@@ -163,6 +189,11 @@ def _run_contracts_startup_checks_for_line(line=None):
         execute_query(
             "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
             (gm_role, msg, 'contract_payment_pending', it['contract_id']),
+            commit=True
+        )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_payment_pending', it['contract_id']),
             commit=True
         )
 
@@ -180,6 +211,11 @@ def _run_contracts_startup_checks_for_line(line=None):
         execute_query(
             "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
             (gm_role, msg, 'contract_bill_pending', it['contract_id']),
+            commit=True
+        )
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_bill_pending', it['contract_id']),
             commit=True
         )
 
@@ -208,12 +244,20 @@ def _run_contracts_startup_checks_for_line(line=None):
             ('data_entry_bg', msg, 'contract_bg_release_pending', c['contract_id']),
             commit=True
         )
+        # Notify director
+        execute_query(
+            "INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+            ('director', msg, 'contract_bg_release_pending', c['contract_id']),
+            commit=True
+        )
 
 
 def run_contracts_startup_checks():
-    """Run contract status + notifications for all lines (tanks, biomedical, battery) on ERP startup."""
+    """Run contract status + notifications for all lines (tanks, biomedical_disposable, biomedical_equipment, battery) on ERP startup."""
     logger.info("Running contract startup checks (all lines)...")
     _run_contracts_startup_checks_for_line(None)
+    _run_contracts_startup_checks_for_line('biomedical_disposable')
+    _run_contracts_startup_checks_for_line('biomedical_equipment')
     _run_contracts_startup_checks_for_line('biomedical')
     _run_contracts_startup_checks_for_line('battery')
 

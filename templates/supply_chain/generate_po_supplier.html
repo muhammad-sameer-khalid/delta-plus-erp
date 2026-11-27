@@ -1,46 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Generate Purchase Order - Supplier Info - Delta Plus ERP{% endblock %}
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Supplier Info - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order: {{ po_number }}</h1>
-    <p>Step 5 of 7: Enter Supplier Information</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order: {{ po_number }}</h1>
+    <p>Step 5 of 7: Enter Supplier Information {{ '(All Fields Optional)' if is_local else '' }}</p>
 
     <div class="form-container mt-4" style="max-width: 700px; margin: 2rem auto;">
-        <form method="POST" action="{{ url_for('supply_chain.generate_po_finalize') }}">
+        <form method="POST" action="{{ url_for('supply_chain.generate_local_po_finalize' if is_local else 'supply_chain.generate_po_finalize') }}">
             <div class="form-group">
-                <label for="name" class="form-label required">Supplier Name</label>
+                <label for="name" class="form-label {{ '' if is_local else 'required' }}">Supplier Name</label>
                 <input type="text" id="name" name="name" class="form-input" 
-                       required placeholder="e.g. Mr. Rock">
+                       {{ '' if is_local else 'required' }} placeholder="e.g. Mr. Rock">
             </div>
 
             <div class="form-group">
-                <label for="company" class="form-label required">Company Name</label>
+                <label for="company" class="form-label {{ '' if is_local else 'required' }}">Company Name</label>
                 <input type="text" id="company" name="company" class="form-input" 
-                       required placeholder="e.g. Shenzen Tianyue Electronic Co., Ltd">
+                       {{ '' if is_local else 'required' }} placeholder="e.g. Shenzen Tianyue Electronic Co., Ltd">
             </div>
 
             <div class="form-group">
-                <label for="address" class="form-label required">Address</label>
+                <label for="address" class="form-label">Address (Optional)</label>
                 <textarea id="address" name="address" class="form-input" rows="3" 
-                          required placeholder="Full address"></textarea>
+                          placeholder="Full address (optional)"></textarea>
             </div>
 
             <div class="form-group">
-                <label for="telephone" class="form-label required">Telephone</label>
+                <label for="telephone" class="form-label {{ '' if is_local else 'required' }}">Telephone</label>
                 <input type="text" id="telephone" name="telephone" class="form-input" 
-                       required placeholder="e.g. 1558484857293">
+                       {{ '' if is_local else 'required' }} placeholder="e.g. 1558484857293">
             </div>
 
             <div class="form-group">
-                <label for="postal_code" class="form-label required">Postal Code</label>
+                <label for="postal_code" class="form-label">Postal Code (Optional)</label>
                 <input type="text" id="postal_code" name="postal_code" class="form-input" 
-                       required placeholder="e.g. 518000">
+                       placeholder="e.g. 518000 (optional)">
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('supply_chain.generate_po_review') }}" class="btn btn-secondary">← Back to Review</a>
+                <a href="{{ url_for('supply_chain.generate_local_po_review' if is_local else 'supply_chain.generate_po_review') }}" class="btn btn-secondary">← Back to Review</a>
                 <button type="submit" class="btn btn-primary">Generate PO →</button>
             </div>
         </form>

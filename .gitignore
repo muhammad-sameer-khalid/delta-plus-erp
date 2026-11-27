@@ -64,3 +64,12 @@ instance/
 
 # Logs
 *.log
+
+# Setup, deployment & internal developer guides (kept locally, not in repo)
+SETUP_GUIDE.md
+setup_online.md
+DEPLOYMENT_CHECKLIST.md
+GITHUB_PUSH_GUIDE.md
+PROJECT_INDEX.md
+DEPLOYMENT_TIDB_VERCEL.md
+*.local.md

@@ -1,37 +1,67 @@
 {% extends "base.html" %}
-{% block title %}Generate PO - Supplier ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Supplier Info ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order: {{ po_number }} ({{ line|capitalize }})</h1>
-    <p>Step 5 of 7: Enter Supplier Information</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order: {{ po_number }} ({{ line|replace('_', ' ')|title }})</h1>
+    <p>Step 5 of 7: Enter Supplier Information {{ '(All Fields Optional)' if is_local else '' }}</p>
+
     <div class="form-container mt-4" style="max-width: 700px; margin: 2rem auto;">
-        <form method="POST" action="{{ url_for(bp ~ '.generate_po_finalize') }}">
+        <form method="POST" action="{{ url_for(bp ~ '.generate_local_po_finalize' if is_local else bp ~ '.generate_po_finalize') }}">
             <div class="form-group">
-                <label for="name" class="form-label required">Supplier Name</label>
-                <input type="text" id="name" name="name" class="form-input" required placeholder="e.g. Mr. Rock">
+                <label for="name" class="form-label {{ '' if is_local else 'required' }}">Supplier Name</label>
+                <input type="text" id="name" name="name" class="form-input" 
+                       {{ '' if is_local else 'required' }} placeholder="e.g. Mr. Rock">
             </div>
+
             <div class="form-group">
-                <label for="company" class="form-label required">Company Name</label>
-                <input type="text" id="company" name="company" class="form-input" required placeholder="e.g. Company Ltd">
+                <label for="company" class="form-label {{ '' if is_local else 'required' }}">Company Name</label>
+                <input type="text" id="company" name="company" class="form-input" 
+                       {{ '' if is_local else 'required' }} placeholder="e.g. Shenzen Tianyue Electronic Co., Ltd">
             </div>
+
             <div class="form-group">
-                <label for="address" class="form-label required">Address</label>
-                <textarea id="address" name="address" class="form-input" rows="3" required></textarea>
+                <label for="address" class="form-label">Address (Optional)</label>
+                <textarea id="address" name="address" class="form-input" rows="3" 
+                          placeholder="Full address (optional)"></textarea>
             </div>
+
             <div class="form-group">
-                <label for="telephone" class="form-label required">Telephone</label>
-                <input type="text" id="telephone" name="telephone" class="form-input" required>
+                <label for="telephone" class="form-label {{ '' if is_local else 'required' }}">Telephone</label>
+                <input type="text" id="telephone" name="telephone" class="form-input" 
+                       {{ '' if is_local else 'required' }} placeholder="e.g. 1558484857293">
             </div>
+
             <div class="form-group">
-                <label for="postal_code" class="form-label required">Postal Code</label>
-                <input type="text" id="postal_code" name="postal_code" class="form-input" required>
+                <label for="postal_code" class="form-label">Postal Code (Optional)</label>
+                <input type="text" id="postal_code" name="postal_code" class="form-input" 
+                       placeholder="e.g. 518000 (optional)">
             </div>
+
             <div class="form-actions">
-                <a href="{{ url_for(bp ~ '.generate_po_review') }}" class="btn btn-secondary">← Back to Review</a>
+                <a href="{{ url_for(bp ~ '.generate_local_po_review' if is_local else bp ~ '.generate_po_review') }}" class="btn btn-secondary">← Back to Review</a>
                 <button type="submit" class="btn btn-primary">Generate PO →</button>
             </div>
         </form>
     </div>
 </div>
-<style>.form-container{background:white;padding:2.5rem;border-radius:8px}.form-actions{display:flex;justify-content:space-between;margin-top:2rem;gap:1rem}</style>
+
+<style>
+    .form-container {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+</style>
 {% endblock %}

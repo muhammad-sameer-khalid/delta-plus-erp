@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Generate Purchase Order - Step 2 - Delta Plus ERP{% endblock %}
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Step 2 - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order: {{ po_number }}</h1>
-    <p>Step 2 of 7: Select Demand Note</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order: {{ po_number }}</h1>
+    <p>Step 2 of 7: Select {{ 'Local' if is_local else 'Import' }} Demand Note</p>
 
     <div class="form-container mt-4" style="max-width: 600px; margin: 2rem auto;">
-        <form method="POST" action="{{ url_for('supply_chain.generate_po_add_components') }}">
+        <form method="POST" action="{{ url_for('supply_chain.generate_local_po_add_components' if is_local else 'supply_chain.generate_po_add_components') }}">
             <div class="form-group">
-                <label for="demand_no" class="form-label required">Select Demand Note</label>
+                <label for="demand_no" class="form-label required">Select Approved {{ 'Local' if is_local else 'Import' }} Demand Note</label>
                 <input type="text" id="demand_search" class="form-input" 
                        placeholder="🔍 Type to search demand numbers..." 
                        onkeyup="filterDemands()">
@@ -21,7 +21,7 @@
                         <option value="{{ num }}">Demand #{{ num }}</option>
                         {% endfor %}
                     {% else %}
-                        <option value="">No approved demands available</option>
+                        <option value="">No approved {{ 'local' if is_local else 'import' }} demands available</option>
                     {% endif %}
                 </select>
                 <small style="color: #666; display: block; margin-top: 0.5rem;">
@@ -30,7 +30,7 @@
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('supply_chain.generate_po') }}" class="btn btn-secondary">← Back</a>
+                <a href="{{ url_for('supply_chain.generate_local_po' if is_local else 'supply_chain.generate_po') }}" class="btn btn-secondary">← Back</a>
                 <button type="submit" class="btn btn-primary" {% if not demand_numbers %}disabled{% endif %}>
                     Next →
                 </button>
@@ -55,11 +55,11 @@ function filterDemands() {
     }
 }
 
-// Auto-select first visible option when search changes
 document.getElementById('demand_search').addEventListener('input', function() {
     const select = document.getElementById('demand_no');
-    for (let i = 0; i < select.options.length; i++) {
-        if (select.options[i].style.display !== 'none') {
+    const options = select.options;
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].style.display !== 'none' && options[i].value !== '') {
             select.selectedIndex = i;
             break;
         }
@@ -80,21 +80,6 @@ document.getElementById('demand_search').addEventListener('input', function() {
         justify-content: space-between;
         margin-top: 2rem;
         gap: 1rem;
-    }
-
-    select[size] {
-        width: 100%;
-        padding: 0.5rem;
-    }
-
-    select option {
-        padding: 0.5rem;
-        cursor: pointer;
-    }
-
-    select option:hover {
-        background: var(--primary-color);
-        color: white;
     }
 </style>
 {% endblock %}

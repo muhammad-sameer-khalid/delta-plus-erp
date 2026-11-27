@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Generate Purchase Order - Step 3 - Delta Plus ERP{% endblock %}
+{% block title %}Generate {{ 'Local' if is_local else 'Import' }} Purchase Order - Step 3 - Delta Plus ERP{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Generate Purchase Order: {{ po_number }}</h1>
-    <p>Step 3 of 7: Select Components & Enter Prices - Demand #{{ demand_no }}</p>
+    <h1>Generate {{ 'Local' if is_local else 'Import' }} Purchase Order: {{ po_number }}</h1>
+    <p>Step 3 of 7: Select Components & Enter/Edit Prices - Demand #{{ demand_no }}</p>
 
     <div class="form-container mt-4">
-        <form method="POST" action="{{ url_for('supply_chain.generate_po_save_components') }}">
+        <form method="POST" action="{{ url_for('supply_chain.generate_local_po_save_components' if is_local else 'supply_chain.generate_po_save_components') }}">
             <input type="hidden" name="demand_no" value="{{ demand_no }}">
 
             <div class="table-container">
@@ -43,6 +43,7 @@
                             <td>
                                 <input type="number" name="unit_price_{{ loop.index0 }}" id="price_{{ loop.index0 }}"
                                     class="form-input price-input" step="0.01" min="0" placeholder="0.00"
+                                    value="{{ comp.unit_price if comp.unit_price and comp.unit_price > 0 else '' }}"
                                     style="width: 120px;">
                             </td>
                         </tr>
@@ -52,7 +53,7 @@
             </div>
 
             <div class="form-actions mt-4">
-                <a href="{{ url_for('supply_chain.generate_po_select_demand') }}" class="btn btn-secondary">← Back</a>
+                <a href="{{ url_for('supply_chain.generate_local_po_select_demand' if is_local else 'supply_chain.generate_po_select_demand') }}" class="btn btn-secondary">← Back</a>
                 <button type="submit" class="btn btn-primary">Add to PO →</button>
             </div>
         </form>
@@ -77,18 +78,16 @@
         if (checkbox.checked) {
             priceField.disabled = false;
             priceField.style.background = 'white';
-            priceField.required = true;
+            priceField.required = false;
             row.style.opacity = '1';
         } else {
             priceField.disabled = true;
             priceField.style.background = '#e0e0e0';
             priceField.required = false;
-            priceField.value = '';
             row.style.opacity = '0.5';
         }
     }
 
-    // Initialize all price fields as enabled
     window.addEventListener('DOMContentLoaded', function () {
         const checkboxes = document.querySelectorAll('.component-checkbox');
         checkboxes.forEach(cb => {
@@ -107,49 +106,20 @@
 
     .table-container {
         overflow-x: auto;
-        margin: 1rem 0;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-    }
-
-    .data-table {
-        min-width: 900px;
-        /* Ensures table doesn't compress too much */
-    }
-
-    .data-table td,
-    .data-table th {
-        white-space: nowrap;
-    }
-
-    .data-table td:nth-child(4) {
-        /* Part Description can wrap */
-        white-space: normal;
-        max-width: 200px;
-        word-wrap: break-word;
+        margin: 1.5rem 0;
     }
 
     .form-actions {
         display: flex;
         justify-content: space-between;
+        margin-top: 2rem;
         gap: 1rem;
         padding-top: 1.5rem;
         border-top: 2px solid var(--border-color);
     }
 
     .price-input {
-        padding: 0.5rem;
         text-align: right;
-    }
-
-    .data-table td {
-        vertical-align: middle;
-    }
-
-    .data-table input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
     }
 </style>
 {% endblock %}
