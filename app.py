@@ -60,6 +60,7 @@ def index():
 def login():
     """Login page"""
     if request.method == 'POST':
+        ensure_system_ready()
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
         
@@ -78,6 +79,41 @@ def login():
             flash('Notice: Please configure your TiDB Cloud environment variables (DB_HOST, DB_USER, etc.) in your Vercel Project Settings.', 'info')
     
     return render_template('login.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint to test serverless status and database connectivity without authentication"""
+    is_vercel = os.getenv('VERCEL') == '1'
+    db_host = Config.DB_CONFIG.get('host', 'localhost')
+    db_status = "unconfigured"
+    
+    if not (is_vercel and db_host in ('localhost', '127.0.0.1')):
+        try:
+            from database import get_db_connection
+            conn = get_db_connection()
+            if conn:
+                db_status = "connected"
+                conn.close()
+            else:
+                db_status = "connection_failed"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+            
+    return jsonify({
+        "status": "ok",
+        "vercel": is_vercel,
+        "database": db_status
+    })
+
+@app.route('/init-db')
+def manual_init_db():
+    """Manual trigger to initialize schema if desired"""
+    try:
+        from database import init_database
+        init_database()
+        return jsonify({"status": "success", "message": "Database and schema initialized successfully."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/logout')
 def logout():
@@ -971,11 +1007,18 @@ _system_ready = False
 _init_attempted = False
 
 def ensure_system_ready():
-    """Ensure database, schema, and connection pool are ready on first request (non-blocking)"""
+    """Ensure database, schema, and connection pool are ready on demand (non-blocking)"""
     global _system_ready, _init_attempted
     if not _system_ready and not _init_attempted:
         _init_attempted = True
         try:
+            # Skip if on Vercel without configured remote DB_HOST
+            is_vercel = os.getenv('VERCEL') == '1'
+            db_host = Config.DB_CONFIG.get('host', 'localhost')
+            if is_vercel and db_host in ('localhost', '127.0.0.1'):
+                logger.info("Running on Vercel without configured remote DB_HOST; skipping database auto-initialization.")
+                return
+            
             from database import init_database
             init_database()
             _system_ready = True
@@ -985,8 +1028,18 @@ def ensure_system_ready():
 @app.before_request
 def check_daily_tasks():
     # Only run on non-static page requests
-    if request.endpoint and 'static' not in request.endpoint:
-        ensure_system_ready()
+    if not request.endpoint or 'static' in request.endpoint:
+        return
+
+    # Skip database initialization and background scans on public landing routes
+    # This guarantees the login page, logout, and health endpoints respond in < 50ms without hitting 504 timeouts
+    if request.endpoint in ('login', 'logout', 'index', 'health'):
+        return
+
+    ensure_system_ready()
+
+    # Only run daily contract status checks for authenticated users visiting the dashboard
+    if session.get('user_email') and request.endpoint == 'dashboard':
         try:
             from daily_checks import run_daily_checks
             run_daily_checks()

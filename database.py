@@ -12,6 +12,34 @@ logger = logging.getLogger(__name__)
 # Connection pool for better performance
 connection_pool = None
 _schema_initialized = False
+_existing_tables_cache = None
+
+def get_existing_tables(force_refresh=False):
+    """
+    Fetch all table names in the current database in a single round-trip.
+    Caches the set in-memory to prevent hundreds of redundant queries to information_schema.
+    """
+    global _existing_tables_cache
+    if _existing_tables_cache is not None and not force_refresh:
+        return _existing_tables_cache
+
+    db_name = Config.DB_CONFIG.get('database')
+    if not db_name:
+        _existing_tables_cache = set()
+        return _existing_tables_cache
+
+    try:
+        query = "SELECT table_name FROM information_schema.tables WHERE table_schema = %s"
+        rows = execute_query(query, (db_name,), fetch=True)
+        if rows:
+            _existing_tables_cache = {r['table_name'].lower() for r in rows if 'table_name' in r}
+        else:
+            _existing_tables_cache = set()
+    except Exception as e:
+        logger.warning(f"Could not retrieve existing tables: {e}")
+        _existing_tables_cache = set()
+
+    return _existing_tables_cache
 
 def ensure_database_exists():
     """
@@ -40,7 +68,7 @@ def ensure_database_exists():
         logger.info(f"Database `{target_db}` verified/created successfully.")
         return True
     except Exception as e:
-        logger.info(f"Direct connection without database parameter: {e}. Trying fallback...")
+        logger.info(f"Direct connection without database parameter: {e}. Trying fallback 'test' database...")
         try:
             # Some cloud providers (e.g., TiDB Cloud default) supply a default 'test' database to connect to first
             fallback_config = dict(server_config)
@@ -55,46 +83,54 @@ def ensure_database_exists():
             logger.info(f"Database `{target_db}` verified/created via fallback 'test' database.")
             return True
         except Exception as e2:
-            logger.info(f"Fallback database verification attempt: {e2}. Proceeding to pool initialization...")
+            logger.warning(f"Fallback database verification attempt: {e2}")
             return False
 
 def init_connection_pool():
-    """Initialize MySQL connection pool with retry logic and auto-database creation"""
+    """Initialize MySQL connection pool with fast-path connection and auto-database creation on error 1049"""
     global connection_pool
-    max_retries = 2
-    retry_delay = 1  # seconds
+    if connection_pool is not None:
+        return True
 
     host = Config.DB_CONFIG.get('host', 'localhost')
     if os.getenv('VERCEL') == '1' and host in ('localhost', '127.0.0.1'):
         logger.warning("Vercel deployment detected without DB_HOST set in environment variables.")
         return False
 
-    # Ensure database exists before attempting to open pooled connections
-    try:
-        ensure_database_exists()
-    except Exception as e:
-        logger.warning(f"ensure_database_exists notice: {e}")
+    default_pool_size = 1 if os.getenv('VERCEL') == '1' else 5
+    pool_size = int(os.getenv('DB_POOL_SIZE', default_pool_size))
 
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Attempting to connect to database (Attempt {attempt + 1}/{max_retries})...")
-            connection_pool = pooling.MySQLConnectionPool(
-                pool_name="delta_plus_pool",
-                pool_size=int(os.getenv('DB_POOL_SIZE', 5)),
-                pool_reset_session=True,
-                **Config.DB_CONFIG
-            )
-            logger.info("MySQL connection pool created successfully")
-            return True
-        except Error as e:
-            logger.error(f"Error creating connection pool: {e}")
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-            else:
-                logger.error("Max retries reached. Could not connect to database.")
-                return False
-    return False
+    # Fast path: try connecting directly to target database
+    try:
+        logger.info("Initializing MySQL connection pool...")
+        connection_pool = pooling.MySQLConnectionPool(
+            pool_name="delta_plus_pool",
+            pool_size=pool_size,
+            pool_reset_session=True,
+            **Config.DB_CONFIG
+        )
+        logger.info("MySQL connection pool created successfully")
+        return True
+    except Error as e:
+        # Check if database does not exist (MySQL error 1049 / Unknown database)
+        err_no = getattr(e, 'errno', None)
+        if err_no == 1049 or 'Unknown database' in str(e):
+            logger.info(f"Database does not exist yet (error {err_no}). Creating database...")
+            if ensure_database_exists():
+                try:
+                    connection_pool = pooling.MySQLConnectionPool(
+                        pool_name="delta_plus_pool",
+                        pool_size=pool_size,
+                        pool_reset_session=True,
+                        **Config.DB_CONFIG
+                    )
+                    logger.info("MySQL connection pool created successfully after database creation")
+                    return True
+                except Error as pool_err:
+                    logger.error(f"Failed to create pool after creating database: {pool_err}")
+                    return False
+        logger.error(f"Error creating connection pool: {e}")
+        return False
 
 def get_db_connection():
     """Get a connection from the pool with auto-reconnect resilience"""
@@ -117,9 +153,7 @@ def get_db_connection():
             if conn:
                 try:
                     if not conn.is_connected():
-                        conn.reconnect(attempts=3, delay=1)
-                    else:
-                        conn.ping(reconnect=True, attempts=3, delay=1)
+                        conn.ping(reconnect=True, attempts=1, delay=0)
                 except Exception as ping_err:
                     logger.warning(f"Connection ping/reconnect issue: {ping_err}")
                 return conn
@@ -129,7 +163,7 @@ def get_db_connection():
         logger.error(f"Error getting connection from pool: {e}")
         return None
 
-def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False):
+def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False, connection=None):
     """
     Execute a SQL query with parameterized inputs to prevent SQL injection
     
@@ -139,11 +173,16 @@ def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False
         fetch: Whether to fetch results
         fetch_one: Whether to fetch only one result
         commit: Whether to commit the transaction
+        connection: Optional existing connection to reuse (avoids pool overhead)
     
     Returns:
         Query results if fetch=True, affected row count if commit=True, None otherwise
     """
-    connection = get_db_connection()
+    should_close = False
+    if connection is None:
+        connection = get_db_connection()
+        should_close = True
+
     if connection is None:
         return None
     
@@ -177,10 +216,10 @@ def execute_query(query, params=None, fetch=False, fetch_one=False, commit=False
     finally:
         if cursor:
             cursor.close()
-        if connection:
+        if should_close and connection:
             connection.close()
 
-def execute_many(query, params_list, commit=True):
+def execute_many(query, params_list, commit=True, connection=None):
     """
     Execute multiple queries with different parameters (batch insert/update)
     
@@ -188,11 +227,16 @@ def execute_many(query, params_list, commit=True):
         query: SQL query string
         params_list: List of parameter tuples
         commit: Whether to commit the transaction
+        connection: Optional existing connection to reuse
     
     Returns:
         Number of affected rows or None on error
     """
-    connection = get_db_connection()
+    should_close = False
+    if connection is None:
+        connection = get_db_connection()
+        should_close = True
+
     if connection is None:
         return None
     
@@ -215,22 +259,20 @@ def execute_many(query, params_list, commit=True):
     finally:
         if cursor:
             cursor.close()
-        if connection:
+        if should_close and connection:
             connection.close()
 
 def table_exists(table_name):
-    """Check if a table exists in the database"""
-    query = """
-        SELECT COUNT(*) as count
-        FROM information_schema.tables 
-        WHERE table_schema = %s AND table_name = %s
-    """
-    result = execute_query(query, (Config.DB_CONFIG['database'], table_name), fetch_one=True)
-    return result and result['count'] > 0
+    """Check if a table exists in the database using the cached table set"""
+    tables = get_existing_tables()
+    return table_name.lower() in tables
 
-def create_table(create_query):
+def create_table(create_query, table_name=None):
     """Create a table with the given CREATE TABLE query"""
-    return execute_query(create_query, commit=True)
+    res = execute_query(create_query, commit=True)
+    if table_name and _existing_tables_cache is not None:
+        _existing_tables_cache.add(table_name.lower())
+    return res
 
 def init_database():
     """Initialize database with required tables on first run (thread-safe, idempotent)"""
@@ -239,7 +281,6 @@ def init_database():
         return
         
     logger.info("Verifying database schema initialization...")
-    ensure_database_exists()
     if connection_pool is None:
         init_connection_pool()
     
@@ -255,7 +296,7 @@ def init_database():
         logger.info("Database schema and default admin initialized successfully!")
     else:
         # Check and ensure line tables exist if added in new updates
-        if not table_exists('users_biomedical_disposable') or not table_exists('users_biomedical_equipment'):
+        if not table_exists('bom_metadata_biomedical_disposable') or not table_exists('bom_metadata_biomedical_equipment'):
             from schema import create_line_tables
             create_line_tables('_biomedical_disposable')
             create_line_tables('_biomedical_equipment')

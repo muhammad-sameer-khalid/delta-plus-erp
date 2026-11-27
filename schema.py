@@ -56,6 +56,10 @@ def create_all_tables():
     
     # Initialize default admin
     initialize_default_admin()
+    
+    # Refresh table cache so all newly created tables are immediately recognized
+    from database import get_existing_tables
+    get_existing_tables(force_refresh=True)
 
 def create_line_tables(suffix):
     """Create full set of tables for a production line (suffix = '_biomedical' or '_battery')."""
