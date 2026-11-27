@@ -174,12 +174,16 @@ def create_user(email, password):
 
 def authenticate_user(email, password):
     """Authenticate a user with email and password"""
+    email = (email or '').strip()
     if not validate_email(email):
         return False, "Invalid email format"
     
     # Get user from database
     query = "SELECT password_hash FROM users WHERE email = %s"
     result = execute_query(query, (email,), fetch_one=True)
+    if not result:
+        # Also try lowercase match
+        result = execute_query(query, (email.lower(),), fetch_one=True)
     
     if not result:
         return False, "Invalid credentials"

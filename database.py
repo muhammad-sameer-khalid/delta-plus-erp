@@ -300,6 +300,13 @@ def init_database():
             from schema import create_line_tables
             create_line_tables('_biomedical_disposable')
             create_line_tables('_biomedical_equipment')
+        
+        # Ensure default administrator accounts and executive roles are provisioned
+        try:
+            from schema import initialize_default_admin
+            initialize_default_admin()
+        except Exception as admin_err:
+            logger.warning(f"Admin accounts check notice: {admin_err}")
             
     _schema_initialized = True
     logger.info("Database verification complete.")
