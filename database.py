@@ -275,6 +275,37 @@ def create_table(create_query, table_name=None):
         _existing_tables_cache.add(table_name.lower())
     return res
 
+def ensure_demand_notes_remarks_columns():
+    """Ensure gm_remarks and director_remarks columns exist on all demand_notes tables (idempotent migration)"""
+    tables = [
+        'demand_notes',
+        'demand_notes_battery',
+        'demand_notes_biomedical_disposable',
+        'demand_notes_biomedical_equipment',
+        'demand_notes_biomedical'
+    ]
+    db_name = Config.DB_CONFIG.get('database')
+    if not db_name:
+        return
+    for t in tables:
+        try:
+            if not table_exists(t):
+                continue
+            cols = execute_query(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+                (db_name, t),
+                fetch=True
+            )
+            col_names = {c['COLUMN_NAME'].lower() for c in cols} if cols else set()
+            if 'gm_remarks' not in col_names:
+                execute_query(f"ALTER TABLE {t} ADD COLUMN gm_remarks TEXT NULL", commit=True)
+                logger.info(f"Added gm_remarks column to {t}")
+            if 'director_remarks' not in col_names:
+                execute_query(f"ALTER TABLE {t} ADD COLUMN director_remarks TEXT NULL", commit=True)
+                logger.info(f"Added director_remarks column to {t}")
+        except Exception as e:
+            logger.warning(f"Could not verify/add remarks columns to {t}: {e}")
+
 def init_database():
     """Initialize database with required tables on first run (thread-safe, idempotent)"""
     global _schema_initialized
@@ -309,5 +340,8 @@ def init_database():
         except Exception as admin_err:
             logger.warning(f"Admin accounts check notice: {admin_err}")
             
+    # Ensure approval remarks columns exist across all production lines
+    ensure_demand_notes_remarks_columns()
+
     _schema_initialized = True
     logger.info("Database verification complete.")

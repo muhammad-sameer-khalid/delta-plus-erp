@@ -82,26 +82,48 @@
     <div class="btn-group mt-4" style="display: flex; gap: 1rem; align-items: center;">
         {% if line is defined and line == 'biomedical_disposable' %}
             <a href="{{ url_for('gm_approvals_biomedical_disposable') }}" class="btn btn-secondary">← Back to List</a>
-            <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_disposable', demand_no=demand.demand_no) }}" style="display: inline;">
         {% elif line is defined and line == 'biomedical_equipment' %}
             <a href="{{ url_for('gm_approvals_biomedical_equipment') }}" class="btn btn-secondary">← Back to List</a>
-            <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_equipment', demand_no=demand.demand_no) }}" style="display: inline;">
         {% elif line is defined and line == 'battery' %}
             <a href="{{ url_for('gm_approvals_battery') }}" class="btn btn-secondary">← Back to List</a>
-            <form method="POST" action="{{ url_for('gm_approve_submit_battery', demand_no=demand.demand_no) }}" style="display: inline;">
         {% else %}
             <a href="{{ url_for('gm_approvals') }}" class="btn btn-secondary">← Back to List</a>
-            <form method="POST" action="{{ url_for('gm_approve_submit', demand_no=demand.demand_no) }}" style="display: inline;">
         {% endif %}
-            <button type="submit" class="btn btn-success"
-                onclick="return confirm('Are you sure you want to approve this demand note and send it to Director?')">
-                ✓ Approve & Send to Director
-            </button>
-        </form>
+
+        <button type="button" class="btn btn-success" onclick="openApproveModal()">
+            ✓ Approve & Send to Director
+        </button>
 
         <button type="button" class="btn btn-danger" onclick="openDeclineModal()">
             ✗ Decline Demand Note
         </button>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div id="approveModal" class="modal">
+    <div class="modal-content" style="max-width: 550px; width: 95%;">
+        <h3 style="color: #2e7d32; margin-top: 0;">Approve Demand Note #{{ demand.demand_no }}</h3>
+        <p style="color: #666;">You are about to approve this demand note and send it to the Director. You can optionally provide remarks or instructions below.</p>
+        
+        {% if line is defined and line == 'biomedical_disposable' %}
+        <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_disposable', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'biomedical_equipment' %}
+        <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_equipment', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'battery' %}
+        <form method="POST" action="{{ url_for('gm_approve_submit_battery', demand_no=demand.demand_no) }}">
+        {% else %}
+        <form method="POST" action="{{ url_for('gm_approve_submit', demand_no=demand.demand_no) }}">
+        {% endif %}
+            <div class="form-group mt-3">
+                <label class="form-label" for="approval_remarks">Approval Remarks (Optional)</label>
+                <textarea id="approval_remarks" name="approval_remarks" class="form-input" rows="4" placeholder="Enter optional approval remarks or instructions..."></textarea>
+            </div>
+            <div class="btn-group mt-4" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" onclick="closeApproveModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-success">Confirm Approval</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -133,6 +155,13 @@
 </div>
 
 <script>
+    function openApproveModal() {
+        document.getElementById('approveModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('approval_remarks').focus(), 50);
+    }
+    function closeApproveModal() {
+        document.getElementById('approveModal').style.display = 'none';
+    }
     function openDeclineModal() {
         document.getElementById('declineModal').style.display = 'flex';
         setTimeout(() => document.getElementById('decline_remarks').focus(), 50);

@@ -598,11 +598,13 @@ def director_approve_submit(demand_no):
     """Final approve demand note and send to Supply Chain (Tanks)"""
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
         UPDATE demand_notes 
-        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW()
+        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW(),
+            director_remarks = %s
         WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+    """, (user_email, remarks, demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Supply Chain', 'success')
     return redirect(url_for('director_approvals'))
 
@@ -647,15 +649,20 @@ def gm_approve_submit(demand_no):
     """Approve demand note and send to Director (Tanks)"""
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
         UPDATE demand_notes 
-        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW()
+        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW(),
+            gm_remarks = %s
         WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+    """, (user_email, remarks, demand_no), commit=True)
+    msg = f'Demand Note #{demand_no} requires your approval'
+    if remarks:
+        msg += f' (GM Remarks: {remarks})'
     execute_query("""
         INSERT INTO notifications (recipient_role, message, notification_type, related_id)
         VALUES (%s, %s, %s, %s)
-    """, ('director', f'Demand Note #{demand_no} requires your approval', 'demand_approval', demand_no), commit=True)
+    """, ('director', msg, 'demand_approval', demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Director', 'success')
     return redirect(url_for('gm_approvals'))
 
@@ -700,9 +707,13 @@ def director_approve_view_battery(demand_no):
 def director_approve_submit_battery(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_battery SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_battery 
+        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW(),
+            director_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Supply Chain', 'success')
     return redirect(url_for('director_approvals_battery'))
 
@@ -742,11 +753,18 @@ def gm_approve_view_battery(demand_no):
 def gm_approve_submit_battery(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_battery SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_battery 
+        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW(),
+            gm_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
+    msg = f'Demand Note #{demand_no} requires your approval (Battery)'
+    if remarks:
+        msg += f' (GM Remarks: {remarks})'
     execute_query("INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
-                  ('director', f'Demand Note #{demand_no} requires your approval (Battery)', 'demand_approval', demand_no), commit=True)
+                  ('director', msg, 'demand_approval', demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Director', 'success')
     return redirect(url_for('gm_approvals_battery'))
 
@@ -790,9 +808,13 @@ def director_approve_view_biomedical_disposable(demand_no):
 def director_approve_submit_biomedical_disposable(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_biomedical_disposable SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_biomedical_disposable 
+        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW(),
+            director_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Supply Chain', 'success')
     return redirect(url_for('director_approvals_biomedical_disposable'))
 
@@ -832,11 +854,18 @@ def gm_approve_view_biomedical_disposable(demand_no):
 def gm_approve_submit_biomedical_disposable(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_biomedical_disposable SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_biomedical_disposable 
+        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW(),
+            gm_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
+    msg = f'Demand Note #{demand_no} requires your approval (Disposable)'
+    if remarks:
+        msg += f' (GM Remarks: {remarks})'
     execute_query("INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
-                  ('director', f'Demand Note #{demand_no} requires your approval (Disposable)', 'demand_approval', demand_no), commit=True)
+                  ('director', msg, 'demand_approval', demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Director', 'success')
     return redirect(url_for('gm_approvals_biomedical_disposable'))
 
@@ -880,9 +909,13 @@ def director_approve_view_biomedical_equipment(demand_no):
 def director_approve_submit_biomedical_equipment(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_biomedical_equipment SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_biomedical_equipment 
+        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW(),
+            director_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Supply Chain', 'success')
     return redirect(url_for('director_approvals_biomedical_equipment'))
 
@@ -922,11 +955,18 @@ def gm_approve_view_biomedical_equipment(demand_no):
 def gm_approve_submit_biomedical_equipment(demand_no):
     from database import execute_query
     user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
     execute_query("""
-        UPDATE demand_notes_biomedical_equipment SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW() WHERE demand_no = %s
-    """, (user_email, demand_no), commit=True)
+        UPDATE demand_notes_biomedical_equipment 
+        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW(),
+            gm_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
+    msg = f'Demand Note #{demand_no} requires your approval (Equipment)'
+    if remarks:
+        msg += f' (GM Remarks: {remarks})'
     execute_query("INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
-                  ('director', f'Demand Note #{demand_no} requires your approval (Equipment)', 'demand_approval', demand_no), commit=True)
+                  ('director', msg, 'demand_approval', demand_no), commit=True)
     flash(f'Demand note {demand_no} approved and sent to Director', 'success')
     return redirect(url_for('gm_approvals_biomedical_equipment'))
 
