@@ -172,6 +172,48 @@ def create_user(email, password):
         return True, "User created successfully"
     return False, "Failed to create user"
 
+def update_user_password(email, new_password):
+    """
+    Update an existing user's password.
+    
+    Args:
+        email: Email address of the user (e.g., user@gmail.com)
+        new_password: New plain-text password
+        
+    Returns:
+        tuple (success: bool, message: str)
+    """
+    email = (email or '').strip()
+    if not email:
+        return False, "Email address is required"
+    if not validate_email(email):
+        return False, "Invalid email format"
+    if not new_password:
+        return False, "New password cannot be empty"
+    if len(new_password) < 4:
+        return False, "Password must be at least 4 characters long"
+    
+    # Check if user exists (check exact and case-insensitive)
+    user = execute_query("SELECT id, email FROM users WHERE email = %s", (email,), fetch_one=True)
+    if not user:
+        user = execute_query("SELECT id, email FROM users WHERE LOWER(email) = %s", (email.lower(),), fetch_one=True)
+        if user:
+            email = user['email']
+        else:
+            return False, f"User account '{email}' was not found"
+            
+    password_hash = hash_password(new_password)
+    result = execute_query(
+        "UPDATE users SET password_hash = %s WHERE email = %s",
+        (password_hash, email),
+        commit=True
+    )
+    
+    if result is not None:
+        logger.info(f"Password updated successfully for account: {email}")
+        return True, f"Password for {email} has been updated successfully"
+    return False, "Failed to update password in database"
+
 def authenticate_user(email, password):
     """Authenticate a user with email and password"""
     email = (email or '').strip()

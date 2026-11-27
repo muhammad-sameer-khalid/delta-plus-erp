@@ -4,31 +4,62 @@
 
 {% block content %}
 <div class="container">
-    <h1>Admin Panel - Role Management</h1>
-    <p>Manage user accounts and role assignments</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="margin-bottom: 0.25rem;">Admin Panel - User & Role Management</h1>
+            <p style="color: #666; margin: 0;">Manage user accounts, assign roles, and update passwords</p>
+        </div>
+        <div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Datalist for User Emails -->
+    <datalist id="user_emails_list">
+        {% if user_roles %}
+        {% for user in user_roles %}
+        <option value="{{ user.email }}"></option>
+        {% endfor %}
+        {% endif %}
+    </datalist>
 
     <!-- Current User Roles Table -->
-    <div class="mt-4">
-        <h3>Current User Roles</h3>
+    <div class="card" style="padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 2rem;">
+        <h3 style="margin-top: 0; margin-bottom: 1rem;">Current User Accounts</h3>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Account</th>
-                        <th>Roles</th>
+                        <th style="min-width: 200px;">Account Email</th>
+                        <th>Assigned Roles</th>
+                        <th style="min-width: 220px; text-align: center;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if user_roles %}
                     {% for user in user_roles %}
                     <tr>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.roles }}</td>
+                        <td><strong>{{ user.email }}</strong></td>
+                        <td>
+                            {% if user.roles %}
+                            <span style="font-size: 0.9rem; color: #444;">{{ user.roles }}</span>
+                            {% else %}
+                            <span style="color: #999; font-style: italic;">No roles assigned</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 4px;" onclick="populatePasswordChange('{{ user.email }}')">
+                                🔑 Change Password
+                            </button>
+                            <button type="button" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 4px; margin-left: 0.4rem;" onclick="populateRoleForm('{{ user.email }}')">
+                                👤 Edit Roles
+                            </button>
+                        </td>
                     </tr>
                     {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="2" class="text-center">No users found</td>
+                        <td colspan="3" class="text-center">No users found</td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -36,50 +67,90 @@
         </div>
     </div>
 
-    <!-- Add/Remove Role Form -->
-    <div class="mt-4">
-        <h3>Add or Remove Role</h3>
-        <p style="font-size: 0.9rem; color: #666;">
-            If the role already exists for the account, it will be removed. Otherwise, it will be added.
-        </p>
+    <!-- Forms Grid: Change Password & Role Management -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        
+        <!-- Change User Password Card -->
+        <div class="card" id="change-password-card" style="border-top: 4px solid #9ACF59; padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🔑</span> Change User Password
+            </h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.25rem;">
+                Select or type the Gmail / account email of any user to reset or change their login password.
+            </p>
 
-        <form method="POST" action="{{ url_for('admin') }}" class="mt-3">
-            <div class="form-group">
-                <label for="email" class="form-label required">Account Email</label>
-                <input type="email" id="email" name="email" class="form-input" required placeholder="user@example.com">
-            </div>
+            <form method="POST" action="{{ url_for('admin_change_password') }}">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="change_email" class="form-label required">Account Email</label>
+                    <input type="email" id="change_email" name="email" class="form-input" list="user_emails_list" required placeholder="user@gmail.com">
+                </div>
 
-            <div class="form-group">
-                <label for="role" class="form-label required">Role</label>
-                <select id="role" name="role" class="form-select" required>
-                    <option value="">Select a role...</option>
-                    {% for role in valid_roles %}
-                    <option value="{{ role }}">{{ role.title() }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="new_password" class="form-label required">New Password</label>
+                    <input type="password" id="new_password" name="new_password" class="form-input" required placeholder="Enter new password (min. 4 characters)">
+                </div>
 
-            <div class="form-group" id="password-field">
-                <label for="password" class="form-label">Password (for new users)</label>
-                <input type="password" id="password" name="password" class="form-input"
-                    placeholder="Leave empty to use default: password123">
-                <small style="color: #666;">
-                    Only required when creating a new user account. If left empty, default password "password123" will
-                    be used.
-                </small>
-            </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="confirm_password" class="form-label required">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" required placeholder="Re-enter new password">
+                    <label style="font-size: 0.85rem; color: #666; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem;">
+                        <input type="checkbox" onchange="togglePasswordVisibility()"> Show Passwords
+                    </label>
+                </div>
 
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-        </form>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600;">
+                    Update Password
+                </button>
+            </form>
+        </div>
+
+        <!-- Add / Remove Role Form Card -->
+        <div class="card" id="role-management-card" style="border-top: 4px solid #4a90e2; padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <span>👤</span> Add or Remove Role
+            </h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.25rem;">
+                If the role already exists for the account, it will be removed. Otherwise, it will be added.
+            </p>
+
+            <form method="POST" action="{{ url_for('admin') }}">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="role_email" class="form-label required">Account Email</label>
+                    <input type="email" id="role_email" name="email" class="form-input" list="user_emails_list" required placeholder="user@example.com">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="role" class="form-label required">Role</label>
+                    <select id="role" name="role" class="form-select" required>
+                        <option value="">Select a role...</option>
+                        {% for role in valid_roles %}
+                        <option value="{{ role }}">{{ role.title() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" id="password-field" style="margin-bottom: 1.25rem;">
+                    <label for="role_password" class="form-label">Password (set or update)</label>
+                    <input type="password" id="role_password" name="password" class="form-input"
+                        placeholder="Leave empty to keep existing password">
+                    <small style="color: #666; display: block; margin-top: 0.25rem;">
+                        When creating a new user, defaults to "password123" if left empty. For existing users, entering a password updates it.
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600;">
+                    Save Role / Account
+                </button>
+            </form>
+        </div>
     </div>
 
-    <!-- Sync Database -->
-    <div class="mt-4" style="border-top: 1px solid #ddd; padding-top: 1.5rem;">
-        <h3>Sync / Backup Database</h3>
-        <p style="color: #555; font-size: 0.95rem;">
+    <!-- Sync / Backup Database -->
+    <div class="card" style="padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid #6c757d;">
+        <h3 style="margin-top: 0;">Sync / Backup Database</h3>
+        <p style="color: #555; font-size: 0.95rem; margin-bottom: 1rem;">
             Downloads a complete backup of the entire ERP database as a <code>.sql</code> file.
-            Use this file to restore the database on a local computer. This may take a few seconds.
+            Use this file to restore the database on a local computer.
         </p>
         <a href="{{ url_for('sync_database') }}" class="btn btn-primary"
             onclick="return confirm('This will download the full database backup. Continue?');">
@@ -89,12 +160,43 @@
 </div>
 
 <script>
-    // Show password field hint
-    document.getElementById('email').addEventListener('input', function () {
-        const passwordField = document.getElementById('password-field');
-        if (this.value.trim()) {
-            passwordField.style.display = 'block';
+    function populatePasswordChange(email) {
+        const emailInput = document.getElementById('change_email');
+        if (emailInput) {
+            emailInput.value = email;
+            const newPwd = document.getElementById('new_password');
+            const confirmPwd = document.getElementById('confirm_password');
+            if (newPwd) {
+                newPwd.value = '';
+                newPwd.focus();
+            }
+            if (confirmPwd) {
+                confirmPwd.value = '';
+            }
+            document.getElementById('change-password-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    });
+    }
+
+    function populateRoleForm(email) {
+        const roleEmail = document.getElementById('role_email');
+        if (roleEmail) {
+            roleEmail.value = email;
+            const roleSelect = document.getElementById('role');
+            if (roleSelect) {
+                roleSelect.focus();
+            }
+            document.getElementById('role-management-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function togglePasswordVisibility() {
+        const p1 = document.getElementById('new_password');
+        const p2 = document.getElementById('confirm_password');
+        if (p1 && p2) {
+            const nextType = p1.type === 'password' ? 'text' : 'password';
+            p1.type = nextType;
+            p2.type = nextType;
+        }
+    }
 </script>
 {% endblock %}

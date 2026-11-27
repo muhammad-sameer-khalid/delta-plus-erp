@@ -11,7 +11,7 @@ from auth import (
     authenticate_user, get_user_roles, can_access_module,
     get_all_user_roles, add_user_role, remove_user_role,
     VALID_ROLES, create_user, get_production_lines_for_user,
-    can_access_contracts, can_delete_items
+    can_access_contracts, can_delete_items, update_user_password
 )
 import logging
 from datetime import datetime
@@ -166,9 +166,11 @@ def admin():
             else:
                 # Existing user: if admin supplied a password, update it
                 if password:
-                    # For existing users we currently do not change the password here
-                    # to avoid schema changes on live systems.
-                    flash('Password changes for existing users are not handled here without a schema update.', 'info')
+                    pwd_updated, pwd_msg = update_user_password(email, password)
+                    if pwd_updated:
+                        flash(f'Password updated for {email}', 'success')
+                    else:
+                        flash(f'Failed to update password: {pwd_msg}', 'error')
 
             # Now handle role add/remove only if user exists
             user_check_after = execute_query(
@@ -196,6 +198,31 @@ def admin():
     return render_template('admin.html', 
                          user_roles=user_roles_data,
                          valid_roles=VALID_ROLES)
+
+
+@app.route('/admin/change-password', methods=['POST'])
+@role_required('director', 'general manager', 'gm logistics')
+def admin_change_password():
+    """Admin route to change any user's password using their email address"""
+    email = request.form.get('email', '').strip()
+    new_password = request.form.get('new_password', '').strip()
+    confirm_password = request.form.get('confirm_password', '').strip()
+
+    if not email:
+        flash('Account email address is required', 'error')
+        return redirect(url_for('admin'))
+
+    if not new_password:
+        flash('New password is required', 'error')
+        return redirect(url_for('admin'))
+
+    if confirm_password and new_password != confirm_password:
+        flash('New password and confirmation password do not match', 'error')
+        return redirect(url_for('admin'))
+
+    success, message = update_user_password(email, new_password)
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('admin'))
 
 
 @app.route('/admin/sync-database')
