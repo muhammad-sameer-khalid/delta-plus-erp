@@ -958,8 +958,31 @@ except ImportError as e:
     logger.warning(f"Could not import route modules: {e}")
     logger.info("Route modules will be loaded when available")
 
+# System readiness tracking for serverless & traditional deployments
+_system_ready = False
+
+def ensure_system_ready():
+    """Ensure database, schema, and connection pool are ready on startup or first request"""
+    global _system_ready
+    if not _system_ready:
+        try:
+            from database import init_database
+            init_database()
+            _system_ready = True
+        except Exception as e:
+            logger.error(f"Failed to auto-initialize system: {e}")
+
+# Try eager initialization on cold start (WSGI import)
+try:
+    ensure_system_ready()
+except Exception as e:
+    logger.warning(f"Startup initialization deferred to first request: {e}")
+
 @app.before_request
 def check_daily_tasks():
+    # Guarantee database and schema are initialized on first HTTP request (zero-touch first run)
+    ensure_system_ready()
+
     # Run daily checks (once per day)
     # Avoid running on static files to save resources
     if request.endpoint and 'static' not in request.endpoint:

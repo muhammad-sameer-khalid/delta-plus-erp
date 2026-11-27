@@ -887,21 +887,13 @@ def create_contracts_daily_check_table():
     logger.info("Created contracts_daily_check table")
 
 def initialize_default_admin():
-    """Initialize default admin account"""
+    """Initialize default admin account with executive roles across lines"""
     import os
     import bcrypt
     
     admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@deltaplus.com')
     default_password = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin123')
 
-    # Check if admin already exists
-    query = "SELECT COUNT(*) as count FROM user_roles WHERE email = %s AND role = %s"
-    result = execute_query(query, (admin_email, 'general manager'), fetch_one=True)
-    
-    if result and result['count'] > 0:
-        logger.info(f"Default admin {admin_email} already exists")
-        return
-    
     # Check if user exists in users table
     user_check = execute_query("SELECT COUNT(*) as count FROM users WHERE email = %s", (admin_email,), fetch_one=True)
     if not user_check or user_check['count'] == 0:
@@ -909,11 +901,22 @@ def initialize_default_admin():
         user_query = "INSERT INTO users (email, password_hash) VALUES (%s, %s)"
         execute_query(user_query, (admin_email, password_hash.decode('utf-8')), commit=True)
     
-    # Insert role
-    role_query = "INSERT INTO user_roles (email, role) VALUES (%s, %s)"
-    execute_query(role_query, (admin_email, 'general manager'), commit=True)
+    # Assign key executive roles so admin has access to all lines and features
+    roles_to_assign = ['director', 'general manager', 'general manager_biomedical', 'general manager_battery']
+    for role in roles_to_assign:
+        role_check = execute_query(
+            "SELECT COUNT(*) as count FROM user_roles WHERE email = %s AND role = %s",
+            (admin_email, role),
+            fetch_one=True
+        )
+        if not role_check or role_check['count'] == 0:
+            execute_query(
+                "INSERT INTO user_roles (email, role) VALUES (%s, %s)",
+                (admin_email, role),
+                commit=True
+            )
     
-    logger.info(f"Created default admin account: {admin_email} (Role: general manager)")
+    logger.info(f"Default admin account initialized: {admin_email} with executive roles across all lines.")
 
 def create_cdr_table():
     """CDR (Call Deposit Receipt) table for Tanks production line."""

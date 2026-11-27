@@ -1,22 +1,67 @@
+import os
+import time
+import logging
 import mysql.connector
 from mysql.connector import Error, pooling
 from config import Config
-import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-import time
-
 # Connection pool for better performance
 connection_pool = None
+_schema_initialized = False
+
+def ensure_database_exists():
+    """
+    Ensure the target MySQL/TiDB database exists.
+    Connects to server and executes CREATE DATABASE IF NOT EXISTS.
+    Works seamlessly with local MySQL and cloud databases (like TiDB Cloud).
+    """
+    target_db = Config.DB_CONFIG.get('database')
+    if not target_db:
+        return True
+    
+    server_config = {k: v for k, v in Config.DB_CONFIG.items() if k != 'database'}
+    server_config['raise_on_warnings'] = False
+    try:
+        conn = mysql.connector.connect(**server_config)
+        cursor = conn.cursor()
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{target_db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        cursor.close()
+        conn.close()
+        logger.info(f"Database `{target_db}` verified/created successfully.")
+        return True
+    except Exception as e:
+        logger.info(f"Direct connection without database parameter: {e}. Trying fallback...")
+        try:
+            # Some cloud providers (e.g., TiDB Cloud default) supply a default 'test' database to connect to first
+            fallback_config = dict(server_config)
+            fallback_config['database'] = 'test'
+            fallback_config['raise_on_warnings'] = False
+            conn = mysql.connector.connect(**fallback_config)
+            cursor = conn.cursor()
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{target_db}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+            cursor.close()
+            conn.close()
+            logger.info(f"Database `{target_db}` verified/created via fallback 'test' database.")
+            return True
+        except Exception as e2:
+            logger.info(f"Fallback database verification attempt: {e2}. Proceeding to pool initialization...")
+            return False
 
 def init_connection_pool():
-    """Initialize MySQL connection pool with retry logic"""
+    """Initialize MySQL connection pool with retry logic and auto-database creation"""
     global connection_pool
     max_retries = 3
     retry_delay = 2  # seconds
+
+    # Ensure database exists before attempting to open pooled connections
+    try:
+        ensure_database_exists()
+    except Exception as e:
+        logger.warning(f"ensure_database_exists notice: {e}")
 
     for attempt in range(max_retries):
         try:
@@ -176,11 +221,28 @@ def create_table(create_query):
     return execute_query(create_query, commit=True)
 
 def init_database():
-    """Initialize database with required tables"""
-    logger.info("Initializing database...")
+    """Initialize database with required tables on first run (thread-safe, idempotent)"""
+    global _schema_initialized
+    if _schema_initialized:
+        return
+        
+    logger.info("Verifying database schema initialization...")
+    ensure_database_exists()
+    if connection_pool is None:
+        init_connection_pool()
     
-    # Import schema initialization
-    from schema import create_all_tables
-    create_all_tables()
-    
-    logger.info("Database initialization complete")
+    # Check if 'users' table exists; if not, create all tables and seed admin
+    if not table_exists('users'):
+        logger.info("Fresh database detected. Initializing entire schema and default admin...")
+        from schema import create_all_tables
+        create_all_tables()
+        logger.info("Database schema and default admin initialized successfully!")
+    else:
+        # Check and ensure line tables exist if added in new updates
+        if not table_exists('users_biomedical_disposable') or not table_exists('users_biomedical_equipment'):
+            from schema import create_line_tables
+            create_line_tables('_biomedical_disposable')
+            create_line_tables('_biomedical_equipment')
+            
+    _schema_initialized = True
+    logger.info("Database verification complete.")
