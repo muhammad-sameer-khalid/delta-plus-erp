@@ -24,7 +24,7 @@
     </datalist>
 
     <!-- Current User Roles Table -->
-    <div class="card" style="padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 2rem;">
+    <div class="admin-card" style="margin-bottom: 2rem;">
         <h3 style="margin-top: 0; margin-bottom: 1rem;">Current User Accounts</h3>
         <div class="table-container">
             <table>
@@ -71,11 +71,11 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
         
         <!-- Change User Password Card -->
-        <div class="card" id="change-password-card" style="border-top: 4px solid #9ACF59; padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+        <div class="admin-card" id="change-password-card" style="border-top: 4px solid #9ACF59;">
             <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
                 <span>🔑</span> Change User Password
             </h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.25rem;">
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
                 Select or type the Gmail / account email of any user to reset or change their login password.
             </p>
 
@@ -93,7 +93,7 @@
                 <div class="form-group" style="margin-bottom: 1rem;">
                     <label for="confirm_password" class="form-label required">Confirm New Password</label>
                     <input type="password" id="confirm_password" name="confirm_password" class="form-input" required placeholder="Re-enter new password">
-                    <label style="font-size: 0.85rem; color: #666; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem;">
+                    <label style="font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem;">
                         <input type="checkbox" onchange="togglePasswordVisibility()"> Show Passwords
                     </label>
                 </div>
@@ -105,11 +105,11 @@
         </div>
 
         <!-- Add / Remove Role Form Card -->
-        <div class="card" id="role-management-card" style="border-top: 4px solid #4a90e2; padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+        <div class="admin-card" id="role-management-card" style="border-top: 4px solid #4a90e2;">
             <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
                 <span>👤</span> Add or Remove Role
             </h3>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1.25rem;">
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
                 If the role already exists for the account, it will be removed. Otherwise, it will be added.
             </p>
 
@@ -133,7 +133,7 @@
                     <label for="role_password" class="form-label">Password (set or update)</label>
                     <input type="password" id="role_password" name="password" class="form-input"
                         placeholder="Leave empty to keep existing password">
-                    <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    <small style="display: block; margin-top: 0.25rem;">
                         When creating a new user, defaults to "password123" if left empty. For existing users, entering a password updates it.
                     </small>
                 </div>
@@ -146,9 +146,9 @@
     </div>
 
     <!-- Sync / Backup Database -->
-    <div class="card" style="padding: 1.5rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid #6c757d;">
+    <div class="admin-card" style="border-top: 4px solid #6c757d;">
         <h3 style="margin-top: 0;">Sync / Backup Database</h3>
-        <p style="color: #555; font-size: 0.95rem; margin-bottom: 1rem;">
+        <p style="font-size: 0.95rem; margin-bottom: 1rem;">
             Downloads a complete backup of the entire ERP database as a <code>.sql</code> file.
             Use this file to restore the database on a local computer.
         </p>

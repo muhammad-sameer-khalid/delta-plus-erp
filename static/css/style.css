@@ -299,6 +299,53 @@ h6 {
     color: var(--text-dark);
 }
 
+/* Admin Panel Cards (Static form/table panels - never turn text white on hover) */
+.admin-card {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    text-align: left;
+    cursor: default;
+    transition: box-shadow var(--transition);
+}
+
+.admin-card:hover {
+    background-color: var(--bg-white) !important;
+    color: var(--text-dark) !important;
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.admin-card h3,
+.admin-card:hover h3 {
+    color: var(--text-dark) !important;
+}
+
+.admin-card p,
+.admin-card:hover p,
+.admin-card small,
+.admin-card:hover small {
+    color: #666 !important;
+}
+
+.admin-card label,
+.admin-card:hover label {
+    color: var(--text-dark) !important;
+}
+
+.admin-card span,
+.admin-card:hover span,
+.admin-card td,
+.admin-card:hover td,
+.admin-card th,
+.admin-card:hover th,
+.admin-card strong,
+.admin-card:hover strong {
+    color: inherit;
+}
+
 /* Card with left border (for module cards) */
 .card-bordered {
     background-color: var(--bg-white);
