@@ -45,16 +45,16 @@
     <div class="empty-line"></div>
 
     <!-- 1x2 Table: Bill to / Ship to -->
-    <table class="local-po-bill-ship">
+    <table class="local-po-bill-ship" style="width: 100%; table-layout: fixed;">
         <tr>
-            <td style="width: 50%;">
+            <td style="width: 50%; word-break: normal; overflow-wrap: break-word; white-space: normal;">
                 <b>Bill to:</b><br>
                 <b>Delta Plus (Pvt) Ltd.</b><br>
                 Talha Plaza, Ramzan Colony, Bhadhana Road, Near Benazeer Chowk, Tarnol, Islamabad<br>
                 Phone: 92-51-2217053<br>
                 Fax: 92-51-2160157
             </td>
-            <td style="width: 50%;">
+            <td style="width: 50%; word-break: normal; overflow-wrap: break-word; white-space: normal;">
                 <b>Ship to:</b><br>
                 <b>Delta Plus (Pvt) Ltd.</b><br>
                 Talha Plaza, Ramzan Colony, Bhadhana Road, Near Benazeer Chowk, Tarnol, Islamabad<br>
@@ -89,7 +89,7 @@
             {% for item in items %}
             <tr>
                 <td style="text-align: center;">{{ loop.index }}</td>
-                <td style="word-break: break-word;">{{ item.part_description or item.part_value or item.part_type }}</td>
+                <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ item.part_description or item.part_value or item.part_type }}</td>
                 <td style="text-align: center;">{{ item.qty }}</td>
                 <td style="text-align: right;">{{ item.unit_price|commas }}</td>
                 <td style="text-align: right;">{{ item.total_price|commas }}</td>
@@ -194,10 +194,14 @@
     .local-po-to {
         line-height: 1.45;
         font-size: 10pt;
+        word-break: normal;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
     }
 
     .local-po-bill-ship {
         width: 100%;
+        table-layout: fixed;
         border: 1px solid #000;
         border-collapse: collapse;
         font-size: 9.5pt;
@@ -208,16 +212,25 @@
         border: 1px solid #000;
         padding: 0.5rem 0.75rem;
         vertical-align: top;
-        line-height: 1.4;
+        line-height: 1.45;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        hyphens: none !important;
     }
 
     .local-po-subject {
         line-height: 1.45;
         font-size: 10pt;
+        word-break: normal;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
     }
 
     .local-po-table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
         font-size: 9.5pt;
         margin: 0.5rem 0;
@@ -227,8 +240,11 @@
     .local-po-table td {
         border: 1px solid #000;
         padding: 0.45rem 0.6rem;
-        word-wrap: break-word;
-        white-space: normal;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        hyphens: none !important;
     }
 
     .local-po-table th {
@@ -310,6 +326,44 @@
             margin: 0 !important;
             max-width: 100% !important;
             min-height: auto !important;
+        }
+
+        .local-po-bill-ship {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border: 1px solid #000 !important;
+            border-collapse: collapse !important;
+            page-break-inside: avoid;
+        }
+
+        .local-po-bill-ship td {
+            border: 1px solid #000 !important;
+            padding: 4pt 6pt !important;
+            font-size: 9pt !important;
+            line-height: 1.35 !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            hyphens: none !important;
+        }
+
+        .local-po-table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+        }
+
+        .local-po-table th,
+        .local-po-table td {
+            border: 1px solid #000 !important;
+            padding: 4pt 5pt !important;
+            font-size: 9pt !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            hyphens: none !important;
         }
 
         .local-po-table th {

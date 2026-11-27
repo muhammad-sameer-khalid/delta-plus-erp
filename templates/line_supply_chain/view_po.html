@@ -154,6 +154,7 @@
 
     .po-bill-ship-table {
         width: 100%;
+        table-layout: fixed;
         margin: 1rem 0;
         border: 1px solid #000;
         border-collapse: collapse
@@ -162,7 +163,12 @@
     .po-bill-ship-table td {
         padding: 0.75rem;
         border: 1px solid #000;
-        vertical-align: top
+        vertical-align: top;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        hyphens: none !important;
     }
 
     .po-subject {

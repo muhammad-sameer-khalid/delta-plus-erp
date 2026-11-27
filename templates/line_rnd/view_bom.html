@@ -41,8 +41,11 @@
     #printableBomArea th, #printableBomArea td {
         border: 1px solid #333 !important;
         padding: 6px 8px !important;
-        word-break: break-word !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
         white-space: normal !important;
+        hyphens: none !important;
         font-size: 9.5pt !important;
         color: #000 !important;
     }
@@ -53,23 +56,25 @@
 </style>
 
 <div class="container">
-    <div class="flex-between mb-4 no-print">
-        <div>
-            <h1>{{ bom.bom_name }}</h1>
-            <p style="color: #666; margin-top: 0.25rem;">
-                {% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %} • Created: {{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else 'N/A' }}
-                • <strong>Currency:</strong> {{ bom.currency or 'RMB' }}
-            </p>
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button onclick="window.print()" class="btn btn-primary">🖨️ Print BOM</button>
-            <a href="{{ url_for(bp ~ '.display_bom') }}" class="btn btn-secondary">← Back to List</a>
+    <div class="mb-4 no-print" style="margin-bottom: 2rem;">
+        <h1 style="margin-bottom: 0.5rem; font-size: 2rem;">{{ bom.bom_name }}</h1>
+        <p style="color: #4b5563; margin-top: 0.25rem; font-size: 1rem; line-height: 1.6;">
+            {% if bom.bom_type == 'PCB' %}📟 PCB{% else %}🔧 Assembly{% endif %} • Created: {{ bom.created_at.strftime('%Y-%m-%d') if bom.created_at else 'N/A' }}
+            • <strong>Currency:</strong> {{ bom.currency or 'RMB' }}
+        </p>
+        <div style="display: flex; gap: 0.85rem; margin-top: 1.25rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" onclick="window.print()" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none; cursor: pointer; text-decoration: none;">
+                🖨️ Print BOM
+            </button>
+            <a href="{{ url_for(bp ~ '.display_bom') }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; text-decoration: none; border: none;">
+                ← Back to List
+            </a>
         </div>
     </div>
     {% if components %}
     <div id="printableBomArea">
-        <div class="table-container">
-            <table class="data-table" style="width: 100%;">
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="data-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
@@ -87,11 +92,11 @@
                     {% for component in components %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td style="word-break: break-word;">{{ component.designator }}</td>
-                        <td style="word-break: break-word;">{{ component.part_type }}</td>
-                        <td style="word-break: break-word;">{{ component.part_value }}</td>
-                        <td style="word-break: break-word;">{{ component.part_description }}</td>
-                        <td style="word-break: break-word;">{{ component.footprint }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.designator }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.part_type }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.part_value }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.part_description }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.footprint }}</td>
                         <td>{{ component.qty }}</td>
                         <td>{{ "%.2f"|format(component.unit_price or 0.0) }}</td>
                         <td>{{ "%.2f"|format(component.total_price or ((component.unit_price or 0.0) * (component.qty or 1))) }}</td>

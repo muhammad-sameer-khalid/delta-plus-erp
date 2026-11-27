@@ -285,23 +285,6 @@ Open [http://localhost:5000](http://localhost:5000) in your web browser.
 
 ---
 
-## ☁️ Cloud Deployment (Vercel + TiDB Cloud)
-
-Delta Plus ERP is pre-configured for one-click serverless deployment using **Vercel** and **TiDB Cloud Serverless MySQL**:
-
-1. **Database**: Spin up a free TiDB Cloud Serverless cluster. Set `DB_PORT=4000` and `DB_SSL=true`.
-2. **Schema**: Run `python schema.py` pointing to your TiDB credentials to scaffold the entire schema.
-3. **App**: Import the GitHub repository into Vercel. Set the environment variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL`, `SECRET_KEY`).
-4. **Deploy**: Vercel executes `@vercel/python` against `app.py` with zero server management overhead.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
 <div align="center">
   <b>Delta Plus ERP</b> — Developed by <b>Muhammad Sameer Khalid</b>
 </div>

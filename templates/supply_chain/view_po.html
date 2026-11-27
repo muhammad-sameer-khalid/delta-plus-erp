@@ -220,6 +220,7 @@
 
     .po-bill-ship-table {
         width: 100%;
+        table-layout: fixed;
         margin: 1rem 0;
         border: 1px solid #000;
         border-collapse: collapse;
@@ -232,6 +233,11 @@
         vertical-align: top;
         line-height: 1.5;
         font-size: 0.9rem;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+        hyphens: none !important;
     }
 
     .po-subject {
@@ -453,10 +459,20 @@
             margin: 8pt 0;
         }
 
+        .po-bill-ship-table {
+            width: 100% !important;
+            table-layout: fixed !important;
+        }
+
         .po-bill-ship-table td {
             font-size: 9pt;
             padding: 5pt;
             line-height: 1.4;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            hyphens: none !important;
         }
 
         /* Footer only on last page (in flow, at end of document) */

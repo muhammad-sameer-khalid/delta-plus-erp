@@ -11,21 +11,28 @@
         <div class="info-item"><strong>Demanded By:</strong> {{ demand.demanded_by }}</div>
     </div>
     <h3>Components</h3>
-    <div class="table-container" style="margin-top: 1rem;">
-        <table class="data-table">
+    <div class="table-container" style="margin-top: 1rem; overflow-x: auto;">
+        <table class="data-table" style="width: 100%; table-layout: fixed;">
             <thead>
-                <tr><th>Sr #</th><th>Part Description</th><th>Qty</th><th>Person's Demand</th><th>Project</th><th>Remarks</th></tr>
+                <tr>
+                    <th style="width: 8%;">Sr #</th>
+                    <th style="width: 32%;">Part Description</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 16%;">Person's Demand</th>
+                    <th style="width: 16%;">Project</th>
+                    <th style="width: 18%;">Remarks</th>
+                </tr>
             </thead>
             <tbody>
                 {% if components %}
                 {% for component in components %}
                 <tr>
                     <td>{{ component.sr_no }}</td>
-                    <td>{{ component.part_description }}</td>
+                    <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.part_description }}</td>
                     <td>{{ component.qty }}</td>
-                    <td>{{ component.persons_demand }}</td>
-                    <td>{{ component.project }}</td>
-                    <td>{{ component.remarks }}</td>
+                    <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.persons_demand }}</td>
+                    <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.project }}</td>
+                    <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.remarks }}</td>
                 </tr>
                 {% endfor %}
                 {% else %}

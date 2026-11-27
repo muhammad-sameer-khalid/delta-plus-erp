@@ -78,26 +78,26 @@
                 <thead>
                     <tr>
                         <th style="width: 5%;">Sr#</th>
-                        <th style="width: 25%;">Part Description</th>
-                        <th style="width: 8%;">Qty</th>
+                        <th style="width: 27%;">Part Description</th>
+                        <th style="width: 6%; text-align: center;">Qty</th>
                         <th style="width: 14%;">Person's Demand</th>
-                        <th style="width: 13%;">Project</th>
-                        <th style="width: 11%;">Unit Price</th>
-                        <th style="width: 11%;">Total Price</th>
-                        <th style="width: 13%;">Remarks</th>
+                        <th style="width: 14%;">Project</th>
+                        <th style="width: 10%; text-align: right;">Unit Price</th>
+                        <th style="width: 10%; text-align: right;">Total Price</th>
+                        <th style="width: 14%;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for component in components %}
                     <tr>
-                        <td>{{ component.sr_no }}</td>
-                        <td>{{ component.part_description }}</td>
-                        <td><strong>{{ component.qty }}</strong></td>
-                        <td>{{ component.persons_demand or '-' }}</td>
-                        <td>{{ component.project or '-' }}</td>
-                        <td>{{ "%.2f"|format(component.unit_price) if component.unit_price is not none and component.unit_price > 0 else '-' }}</td>
-                        <td>{{ "%.2f"|format(component.total_price) if component.total_price is not none and component.total_price > 0 else '-' }}</td>
-                        <td>{{ component.remarks or '-' }}</td>
+                        <td style="text-align: center;">{{ component.sr_no }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.part_description }}</td>
+                        <td style="text-align: center;"><strong>{{ component.qty }}</strong></td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.persons_demand or '-' }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.project or '-' }}</td>
+                        <td style="text-align: right; white-space: nowrap;">{{ "%.2f"|format(component.unit_price) if component.unit_price is not none and component.unit_price > 0 else '-' }}</td>
+                        <td style="text-align: right; white-space: nowrap;">{{ "%.2f"|format(component.total_price) if component.total_price is not none and component.total_price > 0 else '-' }}</td>
+                        <td style="overflow-wrap: break-word; word-break: normal; white-space: normal;">{{ component.remarks or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -138,79 +138,118 @@
 </script>
 
 <style>
+    @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
+    }
+
     @media print {
         .nav-menu,
         .btn-group,
         .btn,
-        button {
+        button,
+        .no-print,
+        .navbar,
+        header,
+        footer,
+        .flash-messages {
             display: none !important;
         }
 
         body {
-            margin: 0;
-            padding: 20px;
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            color: #000 !important;
         }
 
         .container {
-            max-width: 100%;
-            padding: 0;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         h1 {
             text-align: center;
-            font-size: 24px;
-            margin-bottom: 20px;
+            font-size: 18pt;
+            margin-bottom: 12px;
             border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
         }
 
         .info-card {
-            border: 1px solid #333;
-            padding: 15px;
-            margin-bottom: 20px;
+            border: 1px solid #333 !important;
+            padding: 10px 14px !important;
+            margin-bottom: 12px !important;
             page-break-inside: avoid;
+            background: #fff !important;
         }
 
         .info-card label {
             font-weight: bold;
             color: #000 !important;
+            font-size: 8.5pt !important;
         }
 
         .info-card p {
             color: #000 !important;
+            font-size: 9.5pt !important;
+            margin-top: 2px !important;
         }
 
+        /* Suppress horizontal scrollbar in print */
         .table-container {
-            border: 1px solid #333;
-            margin-top: 10px;
+            overflow: visible !important;
+            overflow-x: visible !important;
+            border: 1px solid #333 !important;
+            border-radius: 0 !important;
+            margin: 8px 0 !important;
+            width: 100% !important;
+            box-shadow: none !important;
         }
 
         .data-table {
-            width: 100%;
-            border-collapse: collapse;
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto;
         }
 
-        .data-table th {
-            background: #f0f0f0 !important;
-            color: #000 !important;
-            border: 1px solid #333;
-            padding: 8px;
-            font-weight: bold;
-            text-align: left;
-        }
-
-        .data-table td {
-            border: 1px solid #333;
-            padding: 8px;
-            color: #000 !important;
+        .data-table thead {
+            display: table-header-group;
         }
 
         .data-table tr {
             page-break-inside: avoid;
         }
 
-        @page {
-            margin: 1cm;
+        .data-table th {
+            background: #f0f0f0 !important;
+            color: #000 !important;
+            border: 1px solid #333 !important;
+            padding: 5px 6px !important;
+            font-weight: bold !important;
+            font-size: 8pt !important;
+            text-align: left !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            hyphens: none !important;
+        }
+
+        .data-table td {
+            border: 1px solid #333 !important;
+            padding: 5px 6px !important;
+            color: #000 !important;
+            font-size: 8pt !important;
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            hyphens: none !important;
         }
     }
 
@@ -229,6 +268,7 @@
 
     .data-table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
         background: white;
     }
@@ -238,16 +278,23 @@
     }
 
     .data-table th {
-        padding: 1rem;
+        padding: 0.85rem 0.75rem;
         text-align: left;
         font-weight: 600;
         color: #000;
         border-bottom: 2px solid #ddd;
+        word-break: normal;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        white-space: normal;
     }
 
     .data-table td {
-        padding: 0.75rem 1rem;
+        padding: 0.75rem 0.75rem;
         border-bottom: 1px solid #eee;
+        word-break: normal;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
     }
 
     .data-table tbody tr:hover {
