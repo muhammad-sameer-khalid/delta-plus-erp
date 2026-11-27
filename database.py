@@ -52,8 +52,9 @@ def ensure_database_exists():
         return True
 
     host = Config.DB_CONFIG.get('host', 'localhost')
-    if os.getenv('VERCEL') == '1' and host in ('localhost', '127.0.0.1'):
-        logger.warning("Running on Vercel with DB_HOST=localhost. Remote database environment variables need to be set in Vercel settings.")
+    is_cloud = os.getenv('RENDER') == 'true' or os.getenv('VERCEL') == '1'
+    if is_cloud and host in ('localhost', '127.0.0.1'):
+        logger.warning("Running on cloud with DB_HOST=localhost. Remote database environment variables need to be set in Render settings.")
         return False
     
     server_config = {k: v for k, v in Config.DB_CONFIG.items() if k != 'database'}
@@ -93,12 +94,12 @@ def init_connection_pool():
         return True
 
     host = Config.DB_CONFIG.get('host', 'localhost')
-    if os.getenv('VERCEL') == '1' and host in ('localhost', '127.0.0.1'):
-        logger.warning("Vercel deployment detected without DB_HOST set in environment variables.")
+    is_cloud = os.getenv('RENDER') == 'true' or os.getenv('VERCEL') == '1'
+    if is_cloud and host in ('localhost', '127.0.0.1'):
+        logger.warning("Cloud deployment detected without DB_HOST set in environment variables.")
         return False
 
-    default_pool_size = 1 if os.getenv('VERCEL') == '1' else 5
-    pool_size = int(os.getenv('DB_POOL_SIZE', default_pool_size))
+    pool_size = int(os.getenv('DB_POOL_SIZE', 5))
 
     # Fast path: try connecting directly to target database
     try:

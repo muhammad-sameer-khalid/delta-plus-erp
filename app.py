@@ -74,20 +74,22 @@ def login():
         else:
             flash(message, 'error')
     else:
-        # If running on Vercel and DB_HOST is unconfigured, display helpful message
-        if os.getenv('VERCEL') == '1' and Config.DB_CONFIG.get('host') in ('localhost', '127.0.0.1'):
-            flash('Notice: Please configure your TiDB Cloud environment variables (DB_HOST, DB_USER, etc.) in your Vercel Project Settings.', 'info')
+        # If running on Render or cloud host and DB_HOST is unconfigured, display helpful message
+        is_cloud = os.getenv('RENDER') == 'true' or os.getenv('VERCEL') == '1'
+        if is_cloud and Config.DB_CONFIG.get('host') in ('localhost', '127.0.0.1'):
+            flash('Notice: Please configure your TiDB Cloud environment variables (DB_HOST, DB_USER, etc.) in your Render Environment Variables.', 'info')
     
     return render_template('login.html')
 
 @app.route('/health')
 def health():
-    """Health check endpoint to test serverless status and database connectivity without authentication"""
-    is_vercel = os.getenv('VERCEL') == '1'
+    """Health check endpoint to test server status and database connectivity without authentication"""
+    is_render = os.getenv('RENDER') == 'true'
+    is_cloud = is_render or os.getenv('VERCEL') == '1'
     db_host = Config.DB_CONFIG.get('host', 'localhost')
     db_status = "unconfigured"
     
-    if not (is_vercel and db_host in ('localhost', '127.0.0.1')):
+    if not (is_cloud and db_host in ('localhost', '127.0.0.1')):
         try:
             from database import get_db_connection
             conn = get_db_connection()
@@ -101,7 +103,7 @@ def health():
             
     return jsonify({
         "status": "ok",
-        "vercel": is_vercel,
+        "render": is_render,
         "database": db_status
     })
 
@@ -1012,11 +1014,11 @@ def ensure_system_ready():
     if not _system_ready and not _init_attempted:
         _init_attempted = True
         try:
-            # Skip if on Vercel without configured remote DB_HOST
-            is_vercel = os.getenv('VERCEL') == '1'
+            # Skip if on Render/cloud without configured remote DB_HOST
+            is_cloud = os.getenv('RENDER') == 'true' or os.getenv('VERCEL') == '1'
             db_host = Config.DB_CONFIG.get('host', 'localhost')
-            if is_vercel and db_host in ('localhost', '127.0.0.1'):
-                logger.info("Running on Vercel without configured remote DB_HOST; skipping database auto-initialization.")
+            if is_cloud and db_host in ('localhost', '127.0.0.1'):
+                logger.info("Running on cloud without configured remote DB_HOST; skipping database auto-initialization.")
                 return
             
             from database import init_database

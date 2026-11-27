@@ -30,10 +30,10 @@ class Config:
     if use_ssl:
         DB_CONFIG['ssl_disabled'] = False
         
-        # Check explicit CA or standard Linux CA bundle locations (AWS Lambda/Vercel)
+        # Check explicit CA or standard Linux CA bundle locations (Render/Linux)
         default_ca_paths = [
-            '/etc/pki/tls/certs/ca-bundle.crt',      # Amazon Linux 2 / RHEL (AWS Lambda & Vercel)
-            '/etc/ssl/certs/ca-certificates.crt',    # Debian / Ubuntu
+            '/etc/ssl/certs/ca-certificates.crt',    # Debian / Ubuntu (Render)
+            '/etc/pki/tls/certs/ca-bundle.crt',      # Amazon Linux / RHEL
             '/etc/ssl/cert.pem',                     # Alpine / macOS
         ]
         found_ca = None
