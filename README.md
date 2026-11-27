@@ -6,9 +6,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask 3.0](https://img.shields.io/badge/Flask-3.0.0-black.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![MySQL 8.0 / TiDB](https://img.shields.io/badge/Database-MySQL%208.0%20%7C%20TiDB%20Cloud-orange.svg?logo=mysql&logoColor=white)](https://tidbcloud.com)
-[![Vercel Ready](https://img.shields.io/badge/Deployment-Vercel%20Serverless-000000.svg?logo=vercel&logoColor=white)](https://vercel.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MySQL 8.0](https://img.shields.io/badge/Database-MySQL%208.0-orange.svg?logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![License: Proprietary / Commercial](https://img.shields.io/badge/License-Proprietary%20%2F%20Commercial-red.svg)](#)
 
 *Engineered with strict Role-Based Access Control (RBAC), multi-line domain isolation, dual procurement pipelines (Import vs. Local), executive decline workflows, and A4-compliant document printing.*
 
@@ -61,10 +60,10 @@ Delta Plus ERP is designed following **Domain-Driven Design (DDD)** and **Separa
                │                    │                       │                │
                ▼                    ▼                       ▼                ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                           PERSISTENCE LAYER (MySQL 8.0 / TiDB)                         │
+│                           PERSISTENCE LAYER (MySQL 8.0)                                │
 │                                                                                        │
 │   • Thread-Safe Resilient Connection Pooling (`pooling.MySQLConnectionPool`)          │
-│   • Auto-Reconnecting Ping / TLS 1.2+ Encrypted Socket Handshake                      │
+│   • Auto-Reconnecting Ping / Socket Reconnection Handshake                            │
 │   • 48+ Normalized Tables Partitioned Across Lines (`_biomedical_disposable`, etc.)   │
 │   • 100% Parameterized Prepared Statements (Zero SQL Injection Surface)                │
 └────────────────────────────────────────────────────────────────────────────────────────┘
@@ -159,7 +158,7 @@ Delta Plus ERP provides 8 distinct organizational roles:
 - **Framework**: Flask 3.0.0
 - **Database Driver**: `mysql-connector-python` 8.2.0 (with connection pooling)
 - **Cryptography**: `bcrypt` 4.1.2
-- **Production WSGI Server**: `waitress` 2.1.2 / `@vercel/python` (Serverless)
+- **Production WSGI Server**: `waitress` 2.1.2
 
 ### Frontend
 - **Templating**: Jinja2
@@ -168,10 +167,10 @@ Delta Plus ERP provides 8 distinct organizational roles:
 - **Typography & Icons**: Inter / Font Awesome 6
 - **Print Engine**: CSS `@media print` with page-break-inside rules
 
-### Database & Cloud
-- **Local**: MySQL Server 8.0+
-- **Cloud Database**: TiDB Cloud Serverless (Distributed MySQL with TLS 1.2+)
-- **Cloud Platform**: Vercel Serverless Functions
+### Database
+- **Engine**: MySQL Server 8.0+
+- **Connection Management**: Resilient connection pooling (`pooling.MySQLConnectionPool`)
+- **Query Architecture**: 100% Prepared statements & parameterized execution
 
 ---
 
@@ -181,12 +180,11 @@ Delta Plus ERP provides 8 distinct organizational roles:
 delta-plus-erp/
 ├── app.py                         # Application entrypoint & blueprint registrations
 ├── auth.py                        # Authentication, password hashing & RBAC decorators
-├── config.py                      # Multi-environment configuration & TiDB SSL handler
+├── config.py                      # Application configuration & environment settings
 ├── database.py                    # Connection pool manager & parameterized query engine
 ├── daily_checks.py                # Surveillance engine for contract & delivery deadlines
 ├── schema.py                      # Database schema DDL & automated table initializer
 ├── utils.py                       # Number generators, formatting & helper utilities
-├── vercel.json                    # Vercel Serverless deployment configuration
 ├── requirements.txt               # Pinned Python dependencies
 │
 ├── routes/                        # Modular Route Blueprints
