@@ -44,19 +44,29 @@ def _get_accessible_modules():
 @bp.route('/api/search-contracts')
 @_contracts_access_required
 def api_search_contracts():
-    """Predictive search contracts by number."""
+    """Predictive search contracts by number and optional category."""
     q = (request.args.get('q') or '').strip()
+    cat = (request.args.get('category') or '').strip()
     from flask import jsonify
 
     base_query = f"SELECT * FROM {_cm()}"
+    conditions = []
     params = []
     
     if q:
-        base_query += " WHERE contract_no LIKE %s"
+        conditions.append("contract_no LIKE %s")
         params.append(f'%{q}%')
+        
+    if cat:
+        if cat.lower() == 'disposable':
+            conditions.append("(category = 'Disposable' OR category IS NULL OR category = '')")
+        elif cat.lower() == 'equipment':
+            conditions.append("category = 'Equipment'")
+            
+    if conditions:
+        base_query += " WHERE " + " AND ".join(conditions)
     
     base_query += " ORDER BY contract_no"
-    
     
     contracts = execute_query(base_query, tuple(params), fetch=True) or []
     # Format dates to string YYYY-MM-DD to match server-side rendering
@@ -109,6 +119,9 @@ def input_contract():
         contract_type = request.form.get('contract_type', 'manufacturing').strip()
         if contract_type not in ('manufacturing', 'supply'):
             contract_type = 'manufacturing'
+        contract_category = (request.form.get('contract_category') or 'Disposable').strip()
+        if contract_category not in ('Disposable', 'Equipment'):
+            contract_category = 'Disposable'
         try:
             total_value = float(request.form.get('total_value') or 0)
         except Exception:
@@ -130,10 +143,10 @@ def input_contract():
 
         execute_query(f"""
             INSERT INTO {_cm()}
-            (contract_no, contract_date, contract_type, total_value, delivery_deadline,
+            (contract_no, contract_date, contract_type, category, total_value, delivery_deadline,
              department, contract_status, amount_given, amount_balance)
-            VALUES (%s, %s, %s, %s, %s, %s, 'active', 0, %s)
-        """, (contract_no, contract_date, contract_type, total_value, delivery_deadline,
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', 0, %s)
+        """, (contract_no, contract_date, contract_type, contract_category, total_value, delivery_deadline,
               department, total_value), commit=True)
         flash('Contract saved. Use "Input BG Info" to add bank/BG details, and "Input items" to add items.', 'success')
         return redirect(url_for(f'{BP}.contracts_dashboard'))
@@ -834,6 +847,49 @@ def input_payment_specific(contract_id):
                            show_nav_menu=True, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP)
 
 
+# ========== Display Disposable & Equipment Contracts ==========
+@bp.route('/display-disposable-contracts')
+@_contracts_access_required
+def display_disposable_contracts():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(
+            f"SELECT * FROM {_cm()} WHERE (category = 'Disposable' OR category IS NULL OR category = '') AND contract_no LIKE %s ORDER BY contract_no",
+            (f'%{q}%',), fetch=True
+        ) or []
+    else:
+        contracts = execute_query(
+            f"SELECT * FROM {_cm()} WHERE (category = 'Disposable' OR category IS NULL OR category = '') ORDER BY contract_no",
+            fetch=True
+        ) or []
+    from auth import get_user_roles
+    user_roles = get_user_roles(session.get('user_email', ''))
+    return render_template(TP + 'display_list.html', contracts=contracts, search_q=q,
+                           page_title='Display Disposable Contracts', category_filter='Disposable',
+                           show_nav_menu=False, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
+
+
+@bp.route('/display-equipment-contracts')
+@_contracts_access_required
+def display_equipment_contracts():
+    q = (request.args.get('q') or '').strip()
+    if q:
+        contracts = execute_query(
+            f"SELECT * FROM {_cm()} WHERE category = 'Equipment' AND contract_no LIKE %s ORDER BY contract_no",
+            (f'%{q}%',), fetch=True
+        ) or []
+    else:
+        contracts = execute_query(
+            f"SELECT * FROM {_cm()} WHERE category = 'Equipment' ORDER BY contract_no",
+            fetch=True
+        ) or []
+    from auth import get_user_roles
+    user_roles = get_user_roles(session.get('user_email', ''))
+    return render_template(TP + 'display_list.html', contracts=contracts, search_q=q,
+                           page_title='Display Equipment Contracts', category_filter='Equipment',
+                           show_nav_menu=False, accessible_modules=_get_accessible_modules(), line=LINE, bp=BP, user_roles=user_roles)
+
+
 # ========== 7. Display contract ==========
 @bp.route('/display-contract')
 @_contracts_access_required
@@ -964,6 +1020,9 @@ def edit_contract(contract_id):
         contract_type = request.form.get('contract_type', 'manufacturing').strip()
         if contract_type not in ('manufacturing', 'supply'):
             contract_type = 'manufacturing'
+        contract_category = (request.form.get('contract_category') or 'Disposable').strip()
+        if contract_category not in ('Disposable', 'Equipment'):
+            contract_category = 'Disposable'
         try:
             total_value = float(request.form.get('total_value') or 0)
         except Exception:
@@ -1016,14 +1075,14 @@ def edit_contract(contract_id):
 
         execute_query(f"""
             UPDATE {_cm()} SET
-                contract_no = %s, contract_date = %s, contract_type = %s, total_value = %s,
+                contract_no = %s, contract_date = %s, contract_type = %s, category = %s, total_value = %s,
                 delivery_deadline = %s, contract_status = %s, department = %s, beneficiary = %s,
                 bank_name = %s, bg_number = %s, bg_issue_date = %s, bg_amount = %s,
                 bg_expiry_date = %s, bg_type = %s, amount_given = %s, amount_balance = %s,
                 expected_bg_release_date = %s, remarks = %s,
                 final_crv_no = %s, final_crv_date = %s
             WHERE contract_id = %s
-        """, (contract_no, contract_date, contract_type, total_value,
+        """, (contract_no, contract_date, contract_type, contract_category, total_value,
               delivery_deadline, contract_status, department, beneficiary,
               bank_name, bg_number, bg_issue_date, bg_amount or 0,
               bg_expiry_date, bg_type, amount_given, amount_balance,

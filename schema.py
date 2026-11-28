@@ -50,8 +50,6 @@ def create_all_tables():
     
     # Biomedical and Battery production line tables (full replica per line)
     create_line_tables('_biomedical')
-    create_line_tables('_biomedical_disposable')
-    create_line_tables('_biomedical_equipment')
     create_line_tables('_battery')
     
     # Initialize default admin
@@ -357,6 +355,7 @@ def create_contracts_metadata_table_suffix(suffix):
         contract_no VARCHAR(100) NOT NULL,
         contract_date DATE NOT NULL,
         contract_type ENUM('manufacturing', 'supply') NOT NULL,
+        category VARCHAR(50) NULL DEFAULT 'Disposable',
         total_value DECIMAL(15, 2) NOT NULL,
         delivery_deadline DATE NOT NULL,
         bg_number VARCHAR(500),
@@ -812,6 +811,7 @@ def create_contracts_metadata_table():
         contract_no VARCHAR(100) NOT NULL,
         contract_date DATE NOT NULL,
         contract_type ENUM('manufacturing', 'supply') NOT NULL,
+        category VARCHAR(50) NULL DEFAULT 'Disposable',
         total_value DECIMAL(15, 2) NOT NULL,
         delivery_deadline DATE NOT NULL,
         bg_number VARCHAR(500),

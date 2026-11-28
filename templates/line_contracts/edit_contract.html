@@ -31,6 +31,15 @@
                 <option value="supply" {% if contract.contract_type=='supply' %}selected{% endif %}>Supply</option>
             </select>
         </div>
+        {% if line == 'biomedical' %}
+        <div class="form-group">
+            <label for="contract_category" class="form-label required">Category</label>
+            <select id="contract_category" name="contract_category" class="form-input" required>
+                <option value="Disposable" {% if contract.category == 'Disposable' or not contract.category %}selected{% endif %}>Disposable</option>
+                <option value="Equipment" {% if contract.category == 'Equipment' %}selected{% endif %}>Equipment</option>
+            </select>
+        </div>
+        {% endif %}
         <div class="form-group">
             <label for="production_line" class="form-label required">Production Line</label>
             <select id="production_line" name="production_line" class="form-input" required>

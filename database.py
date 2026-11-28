@@ -306,6 +306,165 @@ def ensure_demand_notes_remarks_columns():
         except Exception as e:
             logger.warning(f"Could not verify/add remarks columns to {t}: {e}")
 
+def ensure_contracts_category_column():
+    """Ensure category column exists on contracts_metadata tables (idempotent migration)"""
+    tables = [
+        'contracts_metadata',
+        'contracts_metadata_biomedical',
+        'contracts_metadata_battery',
+        'contracts_metadata_biomedical_disposable',
+        'contracts_metadata_biomedical_equipment'
+    ]
+    db_name = Config.DB_CONFIG.get('database')
+    if not db_name:
+        return
+    for t in tables:
+        try:
+            if not table_exists(t):
+                continue
+            cols = execute_query(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+                (db_name, t),
+                fetch=True
+            )
+            col_names = {c['COLUMN_NAME'].lower() for c in cols} if cols else set()
+            if 'category' not in col_names:
+                execute_query(f"ALTER TABLE {t} ADD COLUMN category VARCHAR(50) NULL DEFAULT 'Disposable'", commit=True)
+                logger.info(f"Added category column to {t}")
+        except Exception as e:
+            logger.warning(f"Could not verify/add category column to {t}: {e}")
+
+def migrate_biomedical_unified_tables():
+    """Ensure unified biomedical tables exist and migrate data from legacy split tables."""
+    from schema import create_line_tables
+    try:
+        create_line_tables('_biomedical')
+    except Exception as e:
+        logger.warning(f"Notice while ensuring _biomedical line tables: {e}")
+
+    ensure_contracts_category_column()
+    ensure_demand_notes_remarks_columns()
+
+    db_name = Config.DB_CONFIG.get('database')
+    if not db_name:
+        return
+
+    # 1. Contracts migration from split tables to unified contracts_metadata_biomedical
+    for src_table, default_cat in [
+        ('contracts_metadata_biomedical_disposable', 'Disposable'),
+        ('contracts_metadata_biomedical_equipment', 'Equipment')
+    ]:
+        try:
+            if table_exists(src_table) and table_exists('contracts_metadata_biomedical'):
+                src_contracts = execute_query(f"SELECT * FROM {src_table}", fetch=True) or []
+                for sc in src_contracts:
+                    c_no = sc.get('contract_no')
+                    if not c_no:
+                        continue
+                    cat_val = sc.get('category') or default_cat
+                    exists = execute_query(
+                        "SELECT contract_id FROM contracts_metadata_biomedical WHERE contract_no = %s",
+                        (c_no,), fetch_one=True
+                    )
+                    if not exists:
+                        execute_query(f"""
+                            INSERT INTO contracts_metadata_biomedical
+                            (contract_no, contract_date, contract_type, category, total_value, delivery_deadline,
+                             bg_number, bg_amount, bg_expiry_date, bg_issue_date, bank_name, expected_bg_release_date,
+                             remarks, beneficiary, bg_type, department, contract_status, amount_given, amount_balance,
+                             final_crv_no, final_crv_date)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            sc.get('contract_no'), sc.get('contract_date'), sc.get('contract_type'), cat_val,
+                            sc.get('total_value', 0), sc.get('delivery_deadline'), sc.get('bg_number'),
+                            sc.get('bg_amount'), sc.get('bg_expiry_date'), sc.get('bg_issue_date'),
+                            sc.get('bank_name'), sc.get('expected_bg_release_date'), sc.get('remarks'),
+                            sc.get('beneficiary'), sc.get('bg_type'), sc.get('department'),
+                            sc.get('contract_status', 'active'), sc.get('amount_given', 0),
+                            sc.get('amount_balance', sc.get('total_value', 0)),
+                            sc.get('final_crv_no'), sc.get('final_crv_date')
+                        ), commit=True)
+                        new_c = execute_query(
+                            "SELECT contract_id FROM contracts_metadata_biomedical WHERE contract_no = %s",
+                            (c_no,), fetch_one=True
+                        )
+                        new_c_id = new_c.get('contract_id') if new_c else None
+                        old_c_id = sc.get('contract_id')
+                        src_items_table = src_table.replace('contracts_metadata', 'contract_items')
+                        if old_c_id and new_c_id and table_exists(src_items_table) and table_exists('contract_items_biomedical'):
+                            old_items = execute_query(f"SELECT * FROM {src_items_table} WHERE contract_id = %s", (old_c_id,), fetch=True) or []
+                            for oi in old_items:
+                                execute_query(f"""
+                                    INSERT INTO contract_items_biomedical
+                                    (contract_id, item_name, part_number, qty, unit_price, total_price, delivered_qty,
+                                     deliver_balance, inspection_note_no, inspection_note_date, delivery_no, delivery_date,
+                                     crv_no, crv_date, invoice_no, invoice_date, payment_received_amount, net_amount,
+                                     payment_date, tax_deductions, security_deposit_deducted, other_deductions, remarks)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (
+                                    new_c_id, oi.get('item_name'), oi.get('part_number'), oi.get('qty', 0),
+                                    oi.get('unit_price', 0), oi.get('total_price', 0), oi.get('delivered_qty', 0),
+                                    oi.get('deliver_balance', 0), oi.get('inspection_note_no'), oi.get('inspection_note_date'),
+                                    oi.get('delivery_no'), oi.get('delivery_date'), oi.get('crv_no'), oi.get('crv_date'),
+                                    oi.get('invoice_no'), oi.get('invoice_date'), oi.get('payment_received_amount'),
+                                    oi.get('net_amount'), oi.get('payment_date'), oi.get('tax_deductions'),
+                                    oi.get('security_deposit_deducted'), oi.get('other_deductions'), oi.get('remarks')
+                                ), commit=True)
+                    else:
+                        execute_query(
+                            "UPDATE contracts_metadata_biomedical SET category = COALESCE(category, %s) WHERE contract_no = %s",
+                            (cat_val, c_no), commit=True
+                        )
+        except Exception as e:
+            logger.warning(f"Notice while migrating {src_table}: {e}")
+
+    # 2. Demand notes migration from split tables to unified demand_notes_biomedical
+    for src_dn_table in ['demand_notes_biomedical_disposable', 'demand_notes_biomedical_equipment']:
+        try:
+            if table_exists(src_dn_table) and table_exists('demand_notes_biomedical'):
+                old_dns = execute_query(f"SELECT * FROM {src_dn_table}", fetch=True) or []
+                for odn in old_dns:
+                    dn_no = odn.get('demand_no')
+                    if not dn_no:
+                        continue
+                    exists = execute_query("SELECT id FROM demand_notes_biomedical WHERE demand_no = %s", (dn_no,), fetch_one=True)
+                    if not exists:
+                        execute_query(f"""
+                            INSERT INTO demand_notes_biomedical
+                            (demand_no, demand_date, department, required_date, demanded_by, remarks,
+                             approval_status, approved, approved_by_director, director_approved_at,
+                             approved_by_gm, gm_approved_at, gm_remarks, director_remarks,
+                             decline_remarks, declined_by, declined_at, demand_type)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            odn.get('demand_no'), odn.get('demand_date'), odn.get('department'),
+                            odn.get('required_date'), odn.get('demanded_by'), odn.get('remarks'),
+                            odn.get('approval_status', 'draft'), odn.get('approved', False),
+                            odn.get('approved_by_director'), odn.get('director_approved_at'),
+                            odn.get('approved_by_gm'), odn.get('gm_approved_at'),
+                            odn.get('gm_remarks'), odn.get('director_remarks'),
+                            odn.get('decline_remarks'), odn.get('declined_by'), odn.get('declined_at'),
+                            odn.get('demand_type', 'local')
+                        ), commit=True)
+                        new_dn = execute_query("SELECT id FROM demand_notes_biomedical WHERE demand_no = %s", (dn_no,), fetch_one=True)
+                        new_dn_id = new_dn.get('id') if new_dn else None
+                        old_dn_id = odn.get('id')
+                        src_di_table = src_dn_table.replace('demand_notes', 'demand_items')
+                        if old_dn_id and new_dn_id and table_exists(src_di_table) and table_exists('demand_items_biomedical'):
+                            old_items = execute_query(f"SELECT * FROM {src_di_table} WHERE demand_id = %s", (old_dn_id,), fetch=True) or []
+                            for oi in old_items:
+                                execute_query(f"""
+                                    INSERT INTO demand_items_biomedical
+                                    (demand_id, sr_no, part_description, qty, persons_demand, project, unit_price, total_price, remarks)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (
+                                    new_dn_id, oi.get('sr_no'), oi.get('part_description'), oi.get('qty', 0),
+                                    oi.get('persons_demand'), oi.get('project'), oi.get('unit_price'),
+                                    oi.get('total_price'), oi.get('remarks')
+                                ), commit=True)
+        except Exception as e:
+            logger.warning(f"Notice while migrating {src_dn_table}: {e}")
+
 def init_database():
     """Initialize database with required tables on first run (thread-safe, idempotent)"""
     global _schema_initialized
@@ -328,10 +487,9 @@ def init_database():
         logger.info("Database schema and default admin initialized successfully!")
     else:
         # Check and ensure line tables exist if added in new updates
-        if not table_exists('bom_metadata_biomedical_disposable') or not table_exists('bom_metadata_biomedical_equipment'):
+        if not table_exists('bom_metadata_biomedical'):
             from schema import create_line_tables
-            create_line_tables('_biomedical_disposable')
-            create_line_tables('_biomedical_equipment')
+            create_line_tables('_biomedical')
         
         # Ensure default administrator accounts and executive roles are provisioned
         try:
@@ -342,6 +500,9 @@ def init_database():
             
     # Ensure approval remarks columns exist across all production lines
     ensure_demand_notes_remarks_columns()
+
+    # Ensure category column exists on contracts and biomedical tables are unified
+    migrate_biomedical_unified_tables()
 
     _schema_initialized = True
     logger.info("Database verification complete.")

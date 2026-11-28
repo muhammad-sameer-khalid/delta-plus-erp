@@ -69,6 +69,19 @@ user_roles %}
         </div>
         {% endif %}
 
+        {% if line == 'biomedical' and (is_admin or is_bg or is_accounts or is_hr) %}
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_disposable_contracts') }}'"
+            style="cursor: pointer; border-left: 4px solid #0284c7;">
+            <h4>Display Disposable Contracts</h4>
+            <p>View all Disposable contracts and details</p>
+        </div>
+        <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.display_equipment_contracts') }}'"
+            style="cursor: pointer; border-left: 4px solid #10b981;">
+            <h4>Display Equipment Contracts</h4>
+            <p>View all Equipment contracts and details</p>
+        </div>
+        {% endif %}
+
         {% if is_admin or is_bg %}
         <div class="card-bordered" onclick="window.location.href='{{ url_for(bp ~ '.renew_bg_list') }}'"
             style="cursor: pointer;">

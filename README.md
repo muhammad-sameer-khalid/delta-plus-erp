@@ -17,14 +17,13 @@
 
 ## 📌 Executive Summary
 
-**Delta Plus ERP** is a full-featured, secure, and modular Enterprise Resource Planning system specifically engineered for modern industrial manufacturing operations. It orchestrates the end-to-end lifecycle of technical hardware manufacturing across **four segregated production lines**:
+**Delta Plus ERP** is a full-featured, secure, and modular Enterprise Resource Planning system specifically engineered for modern industrial manufacturing operations. It orchestrates the end-to-end lifecycle of technical hardware manufacturing across **three segregated production lines**:
 
 1. **Tanks Production Line**
-2. **Biomedical — Disposable Line**
-3. **Biomedical — Equipment Line**
-4. **Battery Production Line**
+2. **Biomedical Production Line** (unified operations with integrated Disposable vs. Equipment contract categorization)
+3. **Battery Production Line**
 
-From engineering R&D (Bill of Materials design) to shop floor production demand tracking, two-tier executive governance (GM & Director approvals), dual-stream supply chain procurement (Import & Local POs with automated 17% GST calculation), store inventory management, and central contract surveillance, Delta Plus ERP unifies technical workflows into a cohesive, high-performance web platform.
+From engineering R&D (Bill of Materials design) to shop floor production demand tracking, two-tier executive governance (GM & Director approvals with optional remarks), dual-stream supply chain procurement (Import & Local POs with automated 17% GST calculation), store inventory management, and central contract surveillance, Delta Plus ERP unifies technical workflows into a cohesive, high-performance web platform.
 
 ---
 
@@ -50,21 +49,22 @@ Delta Plus ERP is designed following **Domain-Driven Design (DDD)** and **Separa
 │   ┌──────────▼───────────────────────────▼─────────────────────────────▼───────────┐   │
 │   │                             PRODUCTION LINES CONTROLLERS                       │   │
 │   │                                                                                │   │
-│   │  ┌───────────────┐ ┌──────────────────────┐ ┌───────────────────┐ ┌─────────┐ │   │
-│   │  │ Tanks Module  │ │ Biomedical-Disposable│ │Biomedical-Equipmnt│ │ Battery │ │   │
-│   │  │ (RND, Prod,   │ │ (Dedicated RND, Prod,│ │(Dedicated RND,   │ │ (RND,   │ │   │
-│   │  │  SC, QC, Store│ │  SC, QC, Store, CDR) │ │ Prod, SC, QC, ...)│ │ Prod...) │ │   │
-│   │  └───────┬───────┘ └──────────┬───────────┘ └─────────┬─────────┘ └────┬────┘ │   │
-│   └──────────┼────────────────────┼───────────────────────┼────────────────┼──────┘   │
-└──────────────┼────────────────────┼───────────────────────┼────────────────┼──────────┘
-               │                    │                       │                │
-               ▼                    ▼                       ▼                ▼
+│   │  ┌───────────────┐        ┌────────────────────────┐        ┌────────────────┐ │   │
+│   │  │ Tanks Module  │        │   Biomedical Module    │        │ Battery Module │ │   │
+│   │  │ (RND, Prod,   │        │ (Dedicated RND, Prod,  │        │ (RND, Prod,    │ │   │
+│   │  │  SC, QC, Store│        │  SC, QC, Store, CDR,   │        │  SC, QC, Store,│ │   │
+│   │  │  Contracts)   │        │  Contracts Categorized)│        │  Contracts)    │ │   │
+│   │  └───────┬───────┘        └───────────┬────────────┘        └────────┬───────┘ │   │
+│   └──────────┼────────────────────────────┼──────────────────────────────┼─────────┘   │
+└──────────────┼────────────────────────────┼──────────────────────────────┼─────────────┘
+               │                            │                              │
+               ▼                            ▼                              ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                           PERSISTENCE LAYER (MySQL 8.0)                                │
 │                                                                                        │
 │   • Thread-Safe Resilient Connection Pooling (`pooling.MySQLConnectionPool`)          │
 │   • Auto-Reconnecting Ping / Socket Reconnection Handshake                            │
-│   • 48+ Normalized Tables Partitioned Across Lines (`_biomedical_disposable`, etc.)   │
+│   • Normalized Tables Partitioned Across Lines (`_biomedical`, `_battery`, etc.)      │
 │   • 100% Parameterized Prepared Statements (Zero SQL Injection Surface)                │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -98,8 +98,8 @@ To separate international procurement from domestic spot-purchasing, Delta Plus 
 
 ### 3. Executive Approval & Decline Lifecycle
 - **Two-Tier Governance**: Demand Notes transition through **Production Manager** $\rightarrow$ **General Manager** $\rightarrow$ **Director**.
-- **Interactive Decline Modal**: If a GM or Director rejects a demand note, they are prompted with a dedicated remarks modal.
-- **Audit Trail & Feedback Loop**: Decline remarks are permanently logged with the record, the status transitions to `Declined`, and a push notification is dispatched directly to the originator's dashboard.
+- **Interactive Approval & Decline Modals**: Both GM and Director are prompted with interactive modal dialogs upon action. When approving, they can provide optional approval remarks (`gm_remarks`, `director_remarks`); when declining, decline remarks are logged with instant notification feedback.
+- **Audit Trail & Feedback Loop**: Remarks are permanently logged with the record and presented in dedicated status callout banners across all production and supply chain demand views.
 
 ### 4. Dual Purchase Order (PO) Pipelines & Auto-GST
 - **Import Purchase Orders**: Multi-step wizard selecting approved import demands, grouping components, and managing foreign supplier profiles.
@@ -118,11 +118,10 @@ A background surveillance subsystem monitors operational risks on every non-stat
 - **Operational Stagnation**: Tracking Delivery Pending, CRV (Certified Receiving Voucher) Pending, Invoice Pending, and Net Amount Pending.
 - **Dual-Role Dispatch**: Notifications are dispatched simultaneously to both the **General Manager** and the **Director** to maintain executive visibility over cash flow and delivery risks.
 
-### 6. Segregated Biomedical Lines
-Biomedical operations are cleanly divided into two independent sub-systems:
-- **Biomedical — Disposable**: High-volume single-use supplies.
-- **Biomedical — Equipment**: Capital medical devices and machinery.
-- Each possesses its own dedicated database schema, RND records, demand notes, purchase orders, QC tracking, and store inventory.
+### 6. Unified Biomedical Operations with Categorized Contracts
+- **Unified Biomedical Line**: Biomedical production operations (RND, Demand Notes, Procurement, Store Inventory, and QC) operate as a single consolidated production line.
+- **Categorized Contracts**: Within Biomedical Contracts, contracts are classified as either **Disposable** or **Equipment** via a dedicated dropdown during contract input and editing.
+- **Dual Display Views**: The Biomedical Contracts dashboard features dedicated **Display Disposable Contracts** and **Display Equipment Contracts** cards, presenting categorized records in searchable, filterable tables.
 
 ---
 
@@ -188,23 +187,25 @@ delta-plus-erp/
 ├── requirements.txt               # Pinned Python dependencies
 │
 ├── routes/                        # Modular Route Blueprints
+│   ├── contracts_main.py          # Central contracts dashboard & cross-line search
 │   ├── contracts_tanks.py         # Tanks contracts & CDR tracking
+│   ├── contracts_biomedical.py    # Biomedical contracts (Disposable vs. Equipment)
 │   ├── contracts_battery.py       # Battery contracts
-│   ├── contracts_biomedical_disposable.py
-│   ├── contracts_biomedical_equipment.py
 │   ├── line_tables.py             # Shared production line abstraction helpers
 │   ├── production.py              # Tanks production & demand note endpoints
+│   ├── production_biomedical.py   # Biomedical production & demand notes
 │   ├── production_battery.py      # Battery production
-│   ├── production_biomedical_disposable.py
-│   ├── production_biomedical_equipment.py
 │   ├── rnd.py                     # Tanks BOM engineering & predictive search
+│   ├── rnd_biomedical.py          # Biomedical BOM engineering
 │   ├── rnd_battery.py             # Battery BOM engineering
-│   ├── rnd_biomedical_disposable.py
-│   ├── rnd_biomedical_equipment.py
 │   ├── supply_chain.py            # Tanks procurement, Import & Local POs
+│   ├── supply_chain_biomedical.py # Biomedical procurement
 │   ├── supply_chain_battery.py    # Battery procurement
-│   ├── supply_chain_biomedical_disposable.py
-│   └── supply_chain_biomedical_equipment.py
+│   ├── qc_biomedical.py           # Biomedical QC inspections & parameters
+│   └── store_biomedical.py        # Biomedical store inventory management
+│
+├── scripts/                       # Migration & Maintenance Utilities
+│   └── migrate_biomedical_tidb.py # TiDB Cloud / MySQL automated migration script
 │
 ├── static/                        # Static Assets
 │   ├── css/                       # Design system stylesheets
@@ -216,7 +217,7 @@ delta-plus-erp/
     ├── dashboard.html             # Multi-line executive selector dashboard
     ├── tanks_dashboard.html       # Tanks line operational modules
     ├── battery_dashboard.html     # Battery line operational modules
-    ├── biomedical_dashboard.html  # Biomedical line selector (Disposable vs. Equipment)
+    ├── biomedical_dashboard.html  # Biomedical line operational modules
     ├── approvals/                 # GM & Director approval/decline interfaces
     ├── line_production/           # Demand Note templates (Import & Local)
     ├── line_rnd/                  # BOM generation, view & print templates

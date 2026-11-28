@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Display contracts ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
+{% block title %}{{ page_title or 'Display contracts' }} ({{ line|capitalize }}) - Delta Plus ERP{% endblock %}
 {% block content %}
 <div class="container">
-    <h1>Display contracts</h1>
+    <h1>{{ page_title or 'Display contracts' }}</h1>
     <p class="mb-4">Search and open a contract to view details.</p>
     <div class="mt-4"><a href="{{ url_for(bp ~ '.contracts_dashboard') }}" class="btn btn-secondary mb-3">←
             Back to Dashboard</a></div>
@@ -21,6 +21,9 @@
                     <th>Contract No.</th>
                     <th>Date</th>
                     <th>Type</th>
+                    {% if line == 'biomedical' %}
+                    <th>Category</th>
+                    {% endif %}
                     <th>Total Value (Rs.)</th>
                     <th>Status</th>
                     <th>Amount Given</th>
@@ -38,6 +41,9 @@
                     <td>{{ c.contract_no }}</td>
                     <td>{{ c.contract_date }}</td>
                     <td>{{ c.contract_type }}</td>
+                    {% if line == 'biomedical' %}
+                    <td><span style="font-weight: 600; padding: 2px 8px; border-radius: 4px; {% if c.category == 'Equipment' %}background: #e0f2fe; color: #0369a1;{% else %}background: #fef3c7; color: #92400e;{% endif %}">{{ c.category or 'Disposable' }}</span></td>
+                    {% endif %}
                     <td>{{ c.total_value|commas }}</td>
                     <td>{{ c.contract_status }}</td>
                     <td>{{ c.amount_given|commas }}</td>
@@ -77,6 +83,8 @@
             const tableBody = document.getElementById('contractsTableBody');
             const noMsgDiv = document.getElementById('noContractsMsg');
             const contractsPathPrefix = "{{ url_for(bp ~ '.contracts_dashboard') }}".replace(/\/$/, '');
+            const catFilter = "{{ category_filter or '' }}";
+            const isBiomedical = "{{ line }}" === "biomedical";
             let searchTimeout = null;
 
             function renderTable(contracts) {
@@ -92,12 +100,15 @@
                     <td>${c.contract_no || ''}</td>
                     <td>${c.contract_date || ''}</td>
                     <td>${c.contract_type || ''}</td>
+                    ${isBiomedical ? `<td><span style="font-weight: 600; padding: 2px 8px; border-radius: 4px; ${c.category === 'Equipment' ? 'background: #e0f2fe; color: #0369a1;' : 'background: #fef3c7; color: #92400e;'}">${c.category || 'Disposable'}</span></td>` : ''}
                     <td>${formatNumber(c.total_value)}</td>
                     <td>${c.contract_status || ''}</td>
                     <td>${formatNumber(c.amount_given)}</td>
                     <td>${formatNumber(c.amount_balance)}</td>
                     <td>${c.department || '-'}</td>
                     <td>${c.bg_type || '-'}</td>
+                    <td>${c.final_crv_no || '-'}</td>
+                    <td>${c.final_crv_date || '-'}</td>
                     <td>
                         <div style="display: flex; gap: 5px;">
                             <a href="${contractsPathPrefix}/display-contract/${c.contract_id}" class="btn btn-primary">View</a>
@@ -116,7 +127,11 @@
                 const q = this.value.trim();
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(function () {
-                    fetch('{{ url_for(bp ~ ".api_search_contracts") }}?q=' + encodeURIComponent(q))
+                    let searchUrl = '{{ url_for(bp ~ ".api_search_contracts") }}?q=' + encodeURIComponent(q);
+                    if (catFilter) {
+                        searchUrl += '&category=' + encodeURIComponent(catFilter);
+                    }
+                    fetch(searchUrl)
                         .then(r => r.json())
                         .then(data => {
                             renderTable(data.contracts);

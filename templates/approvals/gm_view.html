@@ -80,7 +80,9 @@
 
     <!-- Actions -->
     <div class="btn-group mt-4" style="display: flex; gap: 1rem; align-items: center;">
-        {% if line is defined and line == 'biomedical_disposable' %}
+        {% if line is defined and line == 'biomedical' %}
+            <a href="{{ url_for('gm_approvals_biomedical') }}" class="btn btn-secondary">← Back to List</a>
+        {% elif line is defined and line == 'biomedical_disposable' %}
             <a href="{{ url_for('gm_approvals_biomedical_disposable') }}" class="btn btn-secondary">← Back to List</a>
         {% elif line is defined and line == 'biomedical_equipment' %}
             <a href="{{ url_for('gm_approvals_biomedical_equipment') }}" class="btn btn-secondary">← Back to List</a>
@@ -106,7 +108,9 @@
         <h3 style="color: #2e7d32; margin-top: 0;">Approve Demand Note #{{ demand.demand_no }}</h3>
         <p style="color: #666;">You are about to approve this demand note and send it to the Director. You can optionally provide remarks or instructions below.</p>
         
-        {% if line is defined and line == 'biomedical_disposable' %}
+        {% if line is defined and line == 'biomedical' %}
+        <form method="POST" action="{{ url_for('gm_approve_submit_biomedical', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'biomedical_disposable' %}
         <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_disposable', demand_no=demand.demand_no) }}">
         {% elif line is defined and line == 'biomedical_equipment' %}
         <form method="POST" action="{{ url_for('gm_approve_submit_biomedical_equipment', demand_no=demand.demand_no) }}">
@@ -133,7 +137,9 @@
         <h3 style="color: #e74c3c; margin-top: 0;">Decline Demand Note #{{ demand.demand_no }}</h3>
         <p style="color: #666;">Please provide remarks explaining why this demand note is being declined. These remarks will be saved and sent to the submitter.</p>
         
-        {% if line is defined and line == 'biomedical_disposable' %}
+        {% if line is defined and line == 'biomedical' %}
+        <form method="POST" action="{{ url_for('gm_decline_biomedical', demand_no=demand.demand_no) }}">
+        {% elif line is defined and line == 'biomedical_disposable' %}
         <form method="POST" action="{{ url_for('gm_decline_biomedical_disposable', demand_no=demand.demand_no) }}">
         {% elif line is defined and line == 'biomedical_equipment' %}
         <form method="POST" action="{{ url_for('gm_decline_biomedical_equipment', demand_no=demand.demand_no) }}">

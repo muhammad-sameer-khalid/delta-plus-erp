@@ -346,61 +346,38 @@ def tanks_dashboard():
                          can_access_contracts=can_access_contracts(user_email, 'tanks'))
 
 @app.route('/biomedical')
+@app.route('/biomedical-dashboard')
 @login_required
 def biomedical_dashboard():
-    """Biomedical production line selection dashboard (Disposable and Equipment)."""
+    """Biomedical production line dashboard."""
     user_email = session.get('user_email')
     lines = get_production_lines_for_user(user_email)
     user_roles = session.get('user_roles', [])
-    can_access = 'director' in user_roles or any(
-        l in lines for l in ('biomedical_disposable', 'biomedical_equipment', 'biomedical')
+    can_access = 'director' in user_roles or 'biomedical' in lines or any(
+        l in lines for l in ('biomedical_disposable', 'biomedical_equipment')
     )
     if not can_access:
         flash('You do not have access to the Biomedical production line.', 'error')
         return redirect(url_for('dashboard'))
+    accessible_modules = []
+    for module in ['rnd', 'production', 'supply_chain', 'qc', 'store']:
+        if can_access_module(user_email, module, 'biomedical'):
+            accessible_modules.append(module)
     return render_template('biomedical_dashboard.html',
-                         production_lines=lines,
-                         user_roles=user_roles)
+                         accessible_modules=accessible_modules,
+                         user_roles=user_roles,
+                         can_access_contracts=can_access_contracts(user_email, 'biomedical'),
+                         line='biomedical')
 
 @app.route('/biomedical-disposable')
 @login_required
 def biomedical_disposable_dashboard():
-    """Biomedical Disposable production dashboard."""
-    user_email = session.get('user_email')
-    lines = get_production_lines_for_user(user_email)
-    if 'biomedical_disposable' not in lines and 'director' not in session.get('user_roles', []):
-        flash('You do not have access to the Biomedical Disposable production line.', 'error')
-        return redirect(url_for('dashboard'))
-    user_roles = session.get('user_roles', [])
-    accessible_modules = []
-    for module in ['rnd', 'production', 'supply_chain', 'qc', 'store']:
-        if can_access_module(user_email, module, 'biomedical_disposable'):
-            accessible_modules.append(module)
-    return render_template('biomedical_disposable_dashboard.html',
-                         accessible_modules=accessible_modules,
-                         user_roles=user_roles,
-                         can_access_contracts=can_access_contracts(user_email, 'biomedical_disposable'),
-                         line='biomedical_disposable')
+    return redirect(url_for('biomedical_dashboard'))
 
 @app.route('/biomedical-equipment')
 @login_required
 def biomedical_equipment_dashboard():
-    """Biomedical Equipment production dashboard."""
-    user_email = session.get('user_email')
-    lines = get_production_lines_for_user(user_email)
-    if 'biomedical_equipment' not in lines and 'director' not in session.get('user_roles', []):
-        flash('You do not have access to the Biomedical Equipment production line.', 'error')
-        return redirect(url_for('dashboard'))
-    user_roles = session.get('user_roles', [])
-    accessible_modules = []
-    for module in ['rnd', 'production', 'supply_chain', 'qc', 'store']:
-        if can_access_module(user_email, module, 'biomedical_equipment'):
-            accessible_modules.append(module)
-    return render_template('biomedical_equipment_dashboard.html',
-                         accessible_modules=accessible_modules,
-                         user_roles=user_roles,
-                         can_access_contracts=can_access_contracts(user_email, 'biomedical_equipment'),
-                         line='biomedical_equipment')
+    return redirect(url_for('biomedical_dashboard'))
 
 @app.route('/battery')
 @login_required
@@ -983,38 +960,154 @@ def gm_decline_biomedical_equipment(demand_no):
     )
 
 # --------------------------------------------
-# Legacy Biomedical Approvals (backward compatibility)
+# Biomedical Approvals
 # --------------------------------------------
 
 @app.route('/biomedical/director-approvals')
 @role_required('director')
 def director_approvals_biomedical():
-    return redirect(url_for('director_approvals_biomedical_disposable'))
+    from database import execute_query
+    demands = execute_query("SELECT * FROM demand_notes_biomedical WHERE approval_status = 'pending_director' ORDER BY created_at DESC", fetch=True)
+    return render_template('approvals/director_list.html', demands=demands or [], line='biomedical')
 
 @app.route('/biomedical/director-approve/<demand_no>')
 @role_required('director')
 def director_approve_view_biomedical(demand_no):
-    return redirect(url_for('director_approve_view_biomedical_disposable', demand_no=demand_no))
+    from database import execute_query
+    demand = execute_query("SELECT * FROM demand_notes_biomedical WHERE demand_no = %s", (demand_no,), fetch_one=True)
+    if not demand:
+        flash('Demand note not found', 'error')
+        return redirect(url_for('director_approvals_biomedical'))
+    demand_id = demand.get('id')
+    components = execute_query("SELECT * FROM demand_items_biomedical WHERE demand_id = %s ORDER BY sr_no", (demand_id,), fetch=True) if demand_id else []
+    return render_template('approvals/director_view.html', demand=demand, components=components or [], total_components=len(components or []), line='biomedical')
 
 @app.route('/biomedical/director-approve/<demand_no>/submit', methods=['POST'])
 @role_required('director')
 def director_approve_submit_biomedical(demand_no):
-    return redirect(url_for('director_approve_submit_biomedical_disposable', demand_no=demand_no))
+    from database import execute_query
+    user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
+    execute_query("""
+        UPDATE demand_notes_biomedical 
+        SET approval_status = 'approved', approved = TRUE, approved_by_director = %s, director_approved_at = NOW(),
+            director_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
+    flash(f'Demand note {demand_no} approved and sent to Supply Chain', 'success')
+    return redirect(url_for('director_approvals_biomedical'))
+
+@app.route('/biomedical/director-approve/<demand_no>/decline', methods=['POST'])
+@role_required('director')
+def director_decline_biomedical(demand_no):
+    return _decline_demand_note(
+        demand_no=demand_no,
+        table_name='demand_notes_biomedical',
+        line_name='Biomedical',
+        prod_roles=['production manager_biomedical', 'production member_biomedical'],
+        is_director=True,
+        redirect_endpoint='director_approvals_biomedical'
+    )
 
 @app.route('/biomedical/gm-approvals')
 @role_required('general manager_biomedical')
 def gm_approvals_biomedical():
-    return redirect(url_for('gm_approvals_biomedical_disposable'))
+    from database import execute_query
+    demands = execute_query("SELECT * FROM demand_notes_biomedical WHERE approval_status = 'pending_gm' ORDER BY created_at DESC", fetch=True)
+    return render_template('approvals/gm_list.html', demands=demands or [], line='biomedical')
 
 @app.route('/biomedical/gm-approve/<demand_no>')
 @role_required('general manager_biomedical')
 def gm_approve_view_biomedical(demand_no):
-    return redirect(url_for('gm_approve_view_biomedical_disposable', demand_no=demand_no))
+    from database import execute_query
+    demand = execute_query("SELECT * FROM demand_notes_biomedical WHERE demand_no = %s", (demand_no,), fetch_one=True)
+    if not demand:
+        flash('Demand note not found', 'error')
+        return redirect(url_for('gm_approvals_biomedical'))
+    demand_id = demand.get('id')
+    components = execute_query("SELECT * FROM demand_items_biomedical WHERE demand_id = %s ORDER BY sr_no", (demand_id,), fetch=True) if demand_id else []
+    return render_template('approvals/gm_view.html', demand=demand, components=components or [], total_components=len(components or []), line='biomedical')
 
 @app.route('/biomedical/gm-approve/<demand_no>/submit', methods=['POST'])
 @role_required('general manager_biomedical')
 def gm_approve_submit_biomedical(demand_no):
-    return redirect(url_for('gm_approve_submit_biomedical_disposable', demand_no=demand_no))
+    from database import execute_query
+    user_email = session.get('user_email')
+    remarks = request.form.get('approval_remarks', '').strip() or None
+    execute_query("""
+        UPDATE demand_notes_biomedical 
+        SET approval_status = 'pending_director', approved_by_gm = %s, gm_approved_at = NOW(),
+            gm_remarks = %s 
+        WHERE demand_no = %s
+    """, (user_email, remarks, demand_no), commit=True)
+    msg = f'Demand Note #{demand_no} requires your approval (Biomedical)'
+    if remarks:
+        msg += f' (GM Remarks: {remarks})'
+    execute_query("INSERT INTO notifications (recipient_role, message, notification_type, related_id) VALUES (%s, %s, %s, %s)",
+                  ('director', msg, 'demand_approval', demand_no), commit=True)
+    flash(f'Demand note {demand_no} approved and sent to Director', 'success')
+    return redirect(url_for('gm_approvals_biomedical'))
+
+@app.route('/biomedical/gm-approve/<demand_no>/decline', methods=['POST'])
+@role_required('general manager_biomedical')
+def gm_decline_biomedical(demand_no):
+    return _decline_demand_note(
+        demand_no=demand_no,
+        table_name='demand_notes_biomedical',
+        line_name='Biomedical',
+        prod_roles=['production manager_biomedical', 'production member_biomedical'],
+        is_director=False,
+        redirect_endpoint='gm_approvals_biomedical'
+    )
+
+# Backward-compatibility routes for split biomedical approval URLs
+@app.route('/biomedical-disposable/director-approvals')
+@app.route('/biomedical-equipment/director-approvals')
+@role_required('director')
+def director_approvals_biomedical_compat():
+    return redirect(url_for('director_approvals_biomedical'))
+
+@app.route('/biomedical-disposable/director-approve/<demand_no>')
+@app.route('/biomedical-equipment/director-approve/<demand_no>')
+@role_required('director')
+def director_approve_view_biomedical_compat(demand_no):
+    return redirect(url_for('director_approve_view_biomedical', demand_no=demand_no))
+
+@app.route('/biomedical-disposable/director-approve/<demand_no>/submit', methods=['POST'])
+@app.route('/biomedical-equipment/director-approve/<demand_no>/submit', methods=['POST'])
+@role_required('director')
+def director_approve_submit_biomedical_compat(demand_no):
+    return redirect(url_for('director_approve_submit_biomedical', demand_no=demand_no))
+
+@app.route('/biomedical-disposable/director-approve/<demand_no>/decline', methods=['POST'])
+@app.route('/biomedical-equipment/director-approve/<demand_no>/decline', methods=['POST'])
+@role_required('director')
+def director_decline_biomedical_compat(demand_no):
+    return redirect(url_for('director_approvals_biomedical'))
+
+@app.route('/biomedical-disposable/gm-approvals')
+@app.route('/biomedical-equipment/gm-approvals')
+@role_required('general manager_biomedical')
+def gm_approvals_biomedical_compat():
+    return redirect(url_for('gm_approvals_biomedical'))
+
+@app.route('/biomedical-disposable/gm-approve/<demand_no>')
+@app.route('/biomedical-equipment/gm-approve/<demand_no>')
+@role_required('general manager_biomedical')
+def gm_approve_view_biomedical_compat(demand_no):
+    return redirect(url_for('gm_approve_view_biomedical', demand_no=demand_no))
+
+@app.route('/biomedical-disposable/gm-approve/<demand_no>/submit', methods=['POST'])
+@app.route('/biomedical-equipment/gm-approve/<demand_no>/submit', methods=['POST'])
+@role_required('general manager_biomedical')
+def gm_approve_submit_biomedical_compat(demand_no):
+    return redirect(url_for('gm_approve_submit_biomedical', demand_no=demand_no))
+
+@app.route('/biomedical-disposable/gm-approve/<demand_no>/decline', methods=['POST'])
+@app.route('/biomedical-equipment/gm-approve/<demand_no>/decline', methods=['POST'])
+@role_required('general manager_biomedical')
+def gm_decline_biomedical_compat(demand_no):
+    return redirect(url_for('gm_approvals_biomedical'))
 
 # ============================================
 # Import module routes

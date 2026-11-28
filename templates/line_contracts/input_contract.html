@@ -24,6 +24,15 @@
                 <option value="supply">Supply</option>
             </select>
         </div>
+        {% if line == 'biomedical' %}
+        <div class="form-group">
+            <label for="contract_category" class="form-label required">Category</label>
+            <select id="contract_category" name="contract_category" class="form-input" required>
+                <option value="Disposable">Disposable</option>
+                <option value="Equipment">Equipment</option>
+            </select>
+        </div>
+        {% endif %}
         <div class="form-group">
             <label for="total_value" class="form-label required">Total Value (Rs.)</label>
             <input type="number" id="total_value" name="total_value" class="form-input" step="0.01" min="0.01" required

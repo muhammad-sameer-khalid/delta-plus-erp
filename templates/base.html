@@ -26,13 +26,16 @@
                 <span></span>
             </button>
 
-            {% if show_nav_menu %}
+            {% set is_contracts_view = (request.blueprint and 'contracts' in request.blueprint) or (request.path and ('/contracts' in request.path or '/contracts-tanks' in request.path)) %}
+            {% if is_contracts_view %}
             <ul class="navbar-menu">
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('biomedical_disposable_dashboard') }}">Home</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('biomedical_equipment_dashboard') }}">Home</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                <li><a href="{% if bp is defined and bp.startswith('contracts_') and bp != 'contracts_main' %}{{ url_for(bp ~ '.contracts_dashboard') }}{% else %}{{ url_for('contracts_main.dashboard') }}{% endif %}">Home</a></li>
+            </ul>
+            {% elif show_nav_menu %}
+            <ul class="navbar-menu">
+                {% if line is defined and line == 'biomedical' %}
+                <li><a href="{{ url_for('biomedical_dashboard') }}">Home</a></li>
+                {% elif line is defined and (line == 'biomedical_disposable' or line == 'biomedical_equipment') %}
                 <li><a href="{{ url_for('biomedical_dashboard') }}">Home</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('battery_dashboard') }}">Home</a></li>
@@ -40,11 +43,7 @@
                 <li><a href="{{ url_for('tanks_dashboard') }}">Home</a></li>
                 {% endif %}
                 {% if 'rnd' in accessible_modules %}
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('rnd_biomedical_disposable.rnd_dashboard') }}">RND</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('rnd_biomedical_equipment.rnd_dashboard') }}">RND</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                {% if line is defined and line == 'biomedical' %}
                 <li><a href="{{ url_for('rnd_biomedical.rnd_dashboard') }}">RND</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('rnd_battery.rnd_dashboard') }}">RND</a></li>
@@ -53,11 +52,7 @@
                 {% endif %}
                 {% endif %}
                 {% if 'production' in accessible_modules %}
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('production_biomedical_disposable.production_dashboard') }}">Production</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('production_biomedical_equipment.production_dashboard') }}">Production</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                {% if line is defined and line == 'biomedical' %}
                 <li><a href="{{ url_for('production_biomedical.production_dashboard') }}">Production</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('production_battery.production_dashboard') }}">Production</a></li>
@@ -66,11 +61,7 @@
                 {% endif %}
                 {% endif %}
                 {% if 'supply_chain' in accessible_modules %}
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('supply_chain_biomedical_disposable.supply_chain_dashboard') }}">Supply Chain</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('supply_chain_biomedical_equipment.supply_chain_dashboard') }}">Supply Chain</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                {% if line is defined and line == 'biomedical' %}
                 <li><a href="{{ url_for('supply_chain_biomedical.supply_chain_dashboard') }}">Supply Chain</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('supply_chain_battery.supply_chain_dashboard') }}">Supply Chain</a></li>
@@ -79,11 +70,7 @@
                 {% endif %}
                 {% endif %}
                 {% if 'qc' in accessible_modules %}
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('qc_biomedical_disposable.qc_dashboard') }}">Quality Control</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('qc_biomedical_equipment.qc_dashboard') }}">Quality Control</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                {% if line is defined and line == 'biomedical' %}
                 <li><a href="{{ url_for('qc_biomedical.qc_dashboard') }}">Quality Control</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('qc_battery.qc_dashboard') }}">Quality Control</a></li>
@@ -92,11 +79,7 @@
                 {% endif %}
                 {% endif %}
                 {% if 'store' in accessible_modules %}
-                {% if line is defined and line == 'biomedical_disposable' %}
-                <li><a href="{{ url_for('store_biomedical_disposable.store_dashboard') }}">Store</a></li>
-                {% elif line is defined and line == 'biomedical_equipment' %}
-                <li><a href="{{ url_for('store_biomedical_equipment.store_dashboard') }}">Store</a></li>
-                {% elif line is defined and line == 'biomedical' %}
+                {% if line is defined and line == 'biomedical' %}
                 <li><a href="{{ url_for('store_biomedical.store_dashboard') }}">Store</a></li>
                 {% elif line is defined and line == 'battery' %}
                 <li><a href="{{ url_for('store_battery.store_dashboard') }}">Store</a></li>

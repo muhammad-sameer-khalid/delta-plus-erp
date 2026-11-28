@@ -53,7 +53,7 @@ BATTERY_ROLES = ['general manager_battery'] + \
 VALID_ROLES = list(set(TANKS_ROLES + BIOMEDICAL_ROLES + BATTERY_ROLES))
 
 # Production line identifier
-PRODUCTION_LINES = ('tanks', 'biomedical_disposable', 'biomedical_equipment', 'battery')
+PRODUCTION_LINES = ('tanks', 'biomedical', 'battery')
 
 def get_production_lines_for_user(email):
     """Return list of production line keys the user can access."""
@@ -61,7 +61,7 @@ def get_production_lines_for_user(email):
     lines = set()
     
     if 'director' in user_roles:
-        return ['tanks', 'biomedical_disposable', 'biomedical_equipment', 'battery']
+        return ['tanks', 'biomedical', 'battery']
     
     # Tanks access
     if 'general manager' in user_roles:
@@ -69,10 +69,9 @@ def get_production_lines_for_user(email):
     if any(r.endswith('_tanks') for r in user_roles):
         lines.add('tanks')
         
-    # Biomedical access (grants access to both Disposable and Equipment)
+    # Biomedical access
     if 'general manager_biomedical' in user_roles or any(r.endswith('_biomedical') for r in user_roles):
-        lines.add('biomedical_disposable')
-        lines.add('biomedical_equipment')
+        lines.add('biomedical')
         
     # Battery access
     if 'general manager_battery' in user_roles or any(r.endswith('_battery') for r in user_roles):
