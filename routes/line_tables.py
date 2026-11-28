@@ -1,22 +1,16 @@
-"""Table name suffixes and template prefixes per production line (biomedical_disposable, biomedical_equipment, battery)."""
+"""Table name suffixes and template prefixes per production line (tanks, biomedical, battery)."""
 
 def table_suffix(line):
-    """Return DB table suffix for line: '' for tanks, '_biomedical_disposable', '_biomedical_equipment', '_battery'."""
-    if line == 'biomedical_disposable':
-        return '_biomedical_disposable'
-    if line == 'biomedical_equipment':
-        return '_biomedical_equipment'
-    if line == 'biomedical':
+    """Return DB table suffix for line: '' for tanks, '_biomedical', '_battery'."""
+    if line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
         return '_biomedical'
     if line == 'battery':
         return '_battery'
     return ''
 
 def template_prefix(line):
-    if line == 'biomedical_disposable':
-        return 'biomedical_disposable/'
-    if line == 'biomedical_equipment':
-        return 'biomedical_equipment/'
+    if line in ('biomedical', 'biomedical_disposable', 'biomedical_equipment'):
+        return 'biomedical/'
     if line == 'battery':
         return 'battery/'
     return ''

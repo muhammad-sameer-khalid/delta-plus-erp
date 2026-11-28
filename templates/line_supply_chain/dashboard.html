@@ -7,14 +7,12 @@
             <h1>Supply Chain Department ({{ line|replace('_', ' ')|title }})</h1>
             <p>Purchase Order & Demand Management</p>
         </div>
-        {% if line == 'biomedical_disposable' %}
-        <a href="{{ url_for('biomedical_disposable_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-        {% elif line == 'biomedical_equipment' %}
-        <a href="{{ url_for('biomedical_equipment_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        {% if line == 'biomedical' or line == 'biomedical_disposable' or line == 'biomedical_equipment' %}
+        <a href="{{ url_for('biomedical_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
         {% elif line == 'battery' %}
         <a href="{{ url_for('battery_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
         {% else %}
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        <a href="{{ url_for('tanks_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
         {% endif %}
     </div>
 
